@@ -27,7 +27,7 @@ public class Lang {
     }
 
     public String get(String key) {
-        boolean en = lang.equals("en");
+                boolean en = lang.equals("en");
         switch (key) {
             // ---- Menü Titel ----
             case "menu.title":          return GOLD + BOLD + (en ? "Eggs | Menu"    : "Eggs | Menü");
@@ -72,6 +72,28 @@ public class Lang {
             case "list.upgrade_cost":   return GRAY + (en ? "Upgrade cost: " : "Upgrade-Kosten: ") + RED + "$";
             case "list.multiplier":     return GRAY + (en ? "Multiplier: " : "Multiplikator: ") + AQUA + "x";
             case "list.footer":         return GOLD + BOLD + "===================================";
+
+            // ---- Auto-Collect Button ----
+            case "autocollect.on_name":   return GREEN + BOLD + (en ? "AUTO-COLLECT: ON" : "AUTO-COLLECT: AN");
+            case "autocollect.off_name":  return RED + BOLD + (en ? "AUTO-COLLECT: OFF" : "AUTO-COLLECT: AUS");
+            case "autocollect.desc":      return GRAY + (en ? "Description" : "Beschreibung");
+            case "autocollect.info":      return GOLD + BOLD + (en ? "Information:" : "Information:");
+            case "autocollect.on_text":   return WHITE + (en ? "Money is auto-collected every second." : "Geld wird jede Sekunde automatisch gesammelt.");
+            case "autocollect.off_text":  return WHITE + (en ? "Money accumulates in the chest." : "Geld sammelt sich in der Kiste an.");
+            case "autocollect.click":     return GOLD + BOLD + "➤ " + (en ? "CLICK to toggle" : "KLICK zum Umschalten");
+
+// ---- Pending Chest ----
+            case "pending.name":          return GOLD + BOLD + (en ? "PENDING MONEY" : "AUSSTEHENDES GELD");
+            case "pending.desc":          return GRAY + (en ? "Description" : "Beschreibung");
+            case "pending.info":          return GOLD + BOLD + (en ? "Information:" : "Information:");
+            case "pending.amount":        return GRAY + (en ? "Pending: " : "Ausstehend: ");
+            case "pending.click":         return GOLD + BOLD + "➤ " + (en ? "CLICK to collect" : "KLICK zum Einsammeln");
+            case "pending.collected":     return GREEN + BOLD + (en ? "Collected $%amount%!" : "$%amount% eingesammelt!");
+            case "pending.empty":         return RED + (en ? "Nothing to collect." : "Nichts zum Einsammeln.");
+
+// ---- Storage Menu ----
+            case "storage.equipped":      return GREEN + BOLD + (en ? "Equipped %egg%!" : "%egg% ausgerüstet!");
+            case "storage.hint":          return GOLD + (en ? "Right-click or Shift-click to equip." : "Rechtsklick oder Shift-Klick zum Ausrüsten.");
 
             // ---- Console ----
             case "console.vault_missing": return en ? "Vault not found! FancyEggs is disabling." : "Vault nicht gefunden! FancyEggs wird deaktiviert.";
