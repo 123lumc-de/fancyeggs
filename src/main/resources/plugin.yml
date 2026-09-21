@@ -1,14 +1,11 @@
 name: FancyEggs
 version: 1.4
 main: de.lmcstudio.fancyeggs.FancyEggs
-api-version: '1.21'
+api-version: '26.1'
 softdepend: [Vault]
 authors: [LMCStudio]
-description: Ein passives Einkommens-Plugin mit Eggs.
 commands:
   fancyeggs:
-    description: Öffnet das FancyEggs-Menü oder nutzt Unterbefehle.
-    usage: /fancyeggs [list|give|reload]
     aliases: [eggs, fe]
     permission: fancyeggs.use
 permissions:
