@@ -9,11 +9,9 @@ language: de
 # ================================================
 #   Egg-Einstellungen
 # ================================================
-# Hier kannst du die Werte der Eggs anpassen.
 # base-income: Geld pro Sekunde auf Level 1
 # base-upgrade-cost: Preis für das erste Upgrade
 # upgrade-multiplier: Multiplikator pro Level
-# charged-multiplier: Bonus für "Charged" Eggs (1.25 = +25%)
 eggs:
   Chicken:
     base-income: 15.0
@@ -36,5 +34,5 @@ eggs:
     base-upgrade-cost: 250000.0
     upgrade-multiplier: 1.8
 
-# Globaler Multiplikator für Charged Eggs
+# Globaler Multiplikator für Charged Eggs (1.25 = +25%)
 charged-multiplier: 1.25
