@@ -1,5 +1,6 @@
 package de.lmcstudio.fancyeggs;
 
+import net.kyori.adventure.key.Key;
 import net.milkbowl.vault.economy.Economy;
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.SimplePie;
@@ -31,11 +32,8 @@ public class FancyEggs extends JavaPlugin implements Listener {
     private double chargedMultiplier = 1.25;
     private final DecimalFormat df = new DecimalFormat("#,##0.00");
 
-    // Aktive Eggs (im Menü sichtbar)
     private final Map<UUID, List<Egg>> playerEggs = new HashMap<>();
-    // Auto-Collect Status
     private final Map<UUID, Boolean> autoCollect = new HashMap<>();
-    // Aufgesammeltes Geld (wenn Auto-Collect aus)
     private final Map<UUID, Double> pendingMoney = new HashMap<>();
 
     private final List<EggType> eggTypes = new ArrayList<>();
@@ -144,7 +142,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        // Pending-Money noch auszahlen
         for (Map.Entry<UUID, Double> entry : pendingMoney.entrySet()) {
             Player p = Bukkit.getPlayer(entry.getKey());
             if (p != null && econ != null) econ.depositPlayer(p, entry.getValue());
@@ -240,14 +237,12 @@ public class FancyEggs extends JavaPlugin implements Listener {
     private void openEggsMenu(Player p) {
         Inventory inv = Bukkit.createInventory(null, 54, lang.getColored("menu.title"));
 
-        // ---- Rahmen mit hellgrauen Scheiben ----
         ItemStack border = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
         ItemMeta borderMeta = border.getItemMeta();
         borderMeta.setDisplayName(" ");
         border.setItemMeta(borderMeta);
         for (int slot : BORDER_SLOTS) inv.setItem(slot, border);
 
-        // ---- Eggs anzeigen ----
         List<Egg> eggs = playerEggs.get(p.getUniqueId());
         if (eggs != null) {
             int i = 0;
@@ -298,6 +293,15 @@ public class FancyEggs extends JavaPlugin implements Listener {
     private ItemStack createEggItem(Egg egg) {
         ItemStack item = new ItemStack(egg.type.icon);
         ItemMeta meta = item.getItemMeta();
+
+        // --- Spawn-Egg Textur (Minecraft 1.21.5+ / Paper) ---
+        // Setzt das korrekte Item-Model, damit die gefärbte Spawn-Egg-Textur angezeigt wird.
+        try {
+            String modelName = egg.type.icon.name().toLowerCase();
+            meta.setItemModel(Key.key("minecraft", modelName));
+        } catch (Throwable ignored) {
+            // Fallback für ältere Paper-Versionen: Standard-Item-Textur bleibt
+        }
 
         String charged = egg.isCharged ? lang.getColored("egg.charged_tag") : "";
         meta.setDisplayName(charged + lang.color(Lang.GOLD + Lang.BOLD + egg.type.name));
@@ -427,15 +431,14 @@ public class FancyEggs extends JavaPlugin implements Listener {
             return type.baseUpgradeCost * Math.pow(type.upgradeMultiplier, level - 1);
         }
 
-        // Verkaufspreis = sellMultiplier * Upgrade-Preis (Standard: 4.0)
         public double getSellPrice() {
             return getUpgradeCost() * type.sellMultiplier;
         }
     }
 
     public static class EggType {
-        public String key;              // Config-Key (z.B. "Chicken_Egg")
-        public String name;             // Anzeigename (z.B. "Chicken Egg")
+        public String key;
+        public String name;
         public double baseIncome;
         public double baseUpgradeCost;
         public double upgradeMultiplier;
