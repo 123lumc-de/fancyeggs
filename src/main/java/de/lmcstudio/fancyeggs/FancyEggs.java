@@ -294,13 +294,13 @@ public class FancyEggs extends JavaPlugin implements Listener {
         ItemStack item = new ItemStack(egg.type.icon);
         ItemMeta meta = item.getItemMeta();
 
-        // --- Spawn-Egg Textur (Minecraft 1.21.5+ / Paper) ---
-        // Setzt das korrekte Item-Model, damit die gefärbte Spawn-Egg-Textur angezeigt wird.
+        // --- Spawn-Egg Textur (Paper Data Component API) ---
+        // Setzt das Item-Model auf den Material-Namen, damit die korrekte Textur erscheint.
         try {
             String modelName = egg.type.icon.name().toLowerCase();
             meta.setItemModel(Key.key("minecraft", modelName));
         } catch (Throwable ignored) {
-            // Fallback für ältere Paper-Versionen: Standard-Item-Textur bleibt
+            // Fallback für ältere Paper-Versionen ohne setItemModel-Support
         }
 
         String charged = egg.isCharged ? lang.getColored("egg.charged_tag") : "";
