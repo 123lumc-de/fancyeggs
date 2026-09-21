@@ -33,8 +33,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
     // Aktive Eggs (im Menü sichtbar)
     private final Map<UUID, List<Egg>> playerEggs = new HashMap<>();
-    // Lager (abgelegte Eggs)
-    private final Map<UUID, List<Egg>> playerStorage = new HashMap<>();
     // Auto-Collect Status
     private final Map<UUID, Boolean> autoCollect = new HashMap<>();
     // Aufgesammeltes Geld (wenn Auto-Collect aus)
@@ -44,16 +42,20 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
     // ==== GUI Slots ====
     private static final int[] BORDER_SLOTS = {
-        0,1,2,3,4,5,6,7,8,        // Reihe 1
-        9,17,                     // Reihe 2 (links/rechts)
-        18,26,                    // Reihe 3
-        27,35,                    // Reihe 4
-        36,44,                    // Reihe 5
-        45,46,47,48,49,50,51,52,53 // Reihe 6
+        0,1,2,3,4,5,6,7,8,
+        9,17,
+        18,26,
+        27,35,
+        36,44,
+        45,46,47,48,49,50,51,52,53
     };
     private static final int SLOT_AUTOCOLLECT = 49;
     private static final int SLOT_INFO = 4;
-    private static final int[] EGG_SLOTS = {10,11,12,13,14,15,16, 19,20,21,22,23,24,25, 28,29,30,31,32,33,34};
+    private static final int[] EGG_SLOTS = {
+        10,11,12,13,14,15,16,
+        19,20,21,22,23,24,25,
+        28,29,30,31,32,33,34
+    };
 
     @Override
     public void onEnable() {
@@ -89,7 +91,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 }
             }.runTaskTimer(this, 20L, 20L);
 
-            getLogger().info("FancyEggs erfolgreich geladen und mit Vault verbunden!");
+            getLogger().info(lang.get("console.enabled"));
         }, 1L);
 
         // bStats Setup
@@ -112,35 +114,32 @@ public class FancyEggs extends JavaPlugin implements Listener {
         this.chargedMultiplier = getConfig().getDouble("charged-multiplier", 1.25);
         eggTypes.clear();
 
-        eggTypes.add(new EggType("Chicken Egg",
-            getConfig().getDouble("eggs.Chicken.base-income", 15.0),
-            getConfig().getDouble("eggs.Chicken.base-upgrade-cost", 25000.0),
-            getConfig().getDouble("eggs.Chicken.upgrade-multiplier", 1.5),
-            Material.CHICKEN_SPAWN_EGG));
+        if (!getConfig().isConfigurationSection("eggs")) {
+            getLogger().warning("Keine Eggs in der config.yml gefunden!");
+            return;
+        }
 
-        eggTypes.add(new EggType("Parrot Egg",
-            getConfig().getDouble("eggs.Parrot.base-income", 35.0),
-            getConfig().getDouble("eggs.Parrot.base-upgrade-cost", 50000.0),
-            getConfig().getDouble("eggs.Parrot.upgrade-multiplier", 1.5),
-            Material.PARROT_SPAWN_EGG));
+        for (String key : getConfig().getConfigurationSection("eggs").getKeys(false)) {
+            String path = "eggs." + key + ".";
+            String displayName = getConfig().getString(path + "display-name", key);
+            String iconName = getConfig().getString(path + "icon", "EGG");
+            double baseIncome = getConfig().getDouble(path + "base-income", 10.0);
+            double baseUpgrade = getConfig().getDouble(path + "base-upgrade-cost", 10000.0);
+            double multiplier = getConfig().getDouble(path + "upgrade-multiplier", 1.5);
+            double sellMultiplier = getConfig().getDouble(path + "sell-multiplier", 4.0);
 
-        eggTypes.add(new EggType("Blaze Egg",
-            getConfig().getDouble("eggs.Blaze.base-income", 45.0),
-            getConfig().getDouble("eggs.Blaze.base-upgrade-cost", 100000.0),
-            getConfig().getDouble("eggs.Blaze.upgrade-multiplier", 1.5),
-            Material.BLAZE_SPAWN_EGG));
+            Material icon;
+            try {
+                icon = Material.valueOf(iconName.toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                getLogger().warning("Ungültiges Icon '" + iconName + "' für Egg '" + key + "'. Benutze EGG als Fallback.");
+                icon = Material.EGG;
+            }
 
-        eggTypes.add(new EggType("Squid Egg",
-            getConfig().getDouble("eggs.Squid.base-income", 80.0),
-            getConfig().getDouble("eggs.Squid.base-upgrade-cost", 175000.0),
-            getConfig().getDouble("eggs.Squid.upgrade-multiplier", 1.6),
-            Material.SQUID_SPAWN_EGG));
+            eggTypes.add(new EggType(key, displayName, baseIncome, baseUpgrade, multiplier, sellMultiplier, icon));
+        }
 
-        eggTypes.add(new EggType("Warden Egg",
-            getConfig().getDouble("eggs.Warden.base-income", 150.0),
-            getConfig().getDouble("eggs.Warden.base-upgrade-cost", 250000.0),
-            getConfig().getDouble("eggs.Warden.upgrade-multiplier", 1.8),
-            Material.WARDEN_SPAWN_EGG));
+        getLogger().info(eggTypes.size() + " Eggs aus der Config geladen.");
     }
 
     @Override
@@ -151,7 +150,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
             if (p != null && econ != null) econ.depositPlayer(p, entry.getValue());
         }
         playerEggs.clear();
-        playerStorage.clear();
         pendingMoney.clear();
         autoCollect.clear();
     }
@@ -167,6 +165,19 @@ public class FancyEggs extends JavaPlugin implements Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
+        // /fancyeggs reload
+        if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
+            if (!sender.hasPermission("fancyeggs.admin")) {
+                sender.sendMessage(lang.getColored("msg.no_permission"));
+                return true;
+            }
+            reloadConfig();
+            loadConfigValues();
+            sender.sendMessage(lang.color(Lang.GOLD + Lang.BOLD + "FancyEggs config reloaded. " + eggTypes.size() + " Eggs aktiv."));
+            return true;
+        }
+
+        // /fancyeggs give <Spieler> <EggKey> [charged]
         if (args.length > 0 && args[0].equalsIgnoreCase("give")) {
             if (!sender.hasPermission("fancyeggs.admin")) {
                 sender.sendMessage(lang.getColored("msg.no_permission"));
@@ -175,7 +186,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
             if (args.length < 3) {
                 sender.sendMessage(lang.getColored("msg.give_usage"));
                 sender.sendMessage(lang.getColored("msg.available") + eggTypes.stream()
-                        .map(t -> t.name.replace(" ", "_")).collect(Collectors.joining(", ")));
+                        .map(t -> t.key).collect(Collectors.joining(", ")));
                 return true;
             }
             Player target = Bukkit.getPlayer(args[1]);
@@ -183,8 +194,10 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 sender.sendMessage(lang.getColored("msg.player_not_found"));
                 return true;
             }
-            String eggName = args[2].replace("_", " ");
-            EggType type = eggTypes.stream().filter(t -> t.name.equalsIgnoreCase(eggName)).findFirst().orElse(null);
+            String eggKey = args[2];
+            EggType type = eggTypes.stream()
+                    .filter(t -> t.key.equalsIgnoreCase(eggKey) || t.name.equalsIgnoreCase(eggKey.replace("_", " ")))
+                    .findFirst().orElse(null);
             if (type == null) {
                 sender.sendMessage(lang.getColored("msg.egg_not_found"));
                 return true;
@@ -200,10 +213,11 @@ public class FancyEggs extends JavaPlugin implements Listener {
             return true;
         }
 
+        // /fancyeggs list
         if (args.length > 0 && args[0].equalsIgnoreCase("list")) {
             sender.sendMessage(lang.getColored("list.header"));
             for (EggType type : eggTypes) {
-                sender.sendMessage(lang.getColored("list.name") + lang.color(Lang.GOLD + Lang.BOLD + type.name));
+                sender.sendMessage(lang.getColored("list.name") + lang.color(Lang.GOLD + Lang.BOLD + type.name + " (" + type.key + ")"));
                 sender.sendMessage(lang.getColored("list.base_income") + lang.color(Lang.GOLD + Lang.BOLD + df.format(type.baseIncome)) + lang.color(Lang.WHITE) + "/s");
                 sender.sendMessage(lang.getColored("list.upgrade_cost") + lang.color(Lang.GOLD + Lang.BOLD + df.format(type.baseUpgradeCost)));
                 sender.sendMessage(lang.getColored("list.multiplier") + lang.color(Lang.GOLD + Lang.BOLD + type.upgradeMultiplier));
@@ -295,37 +309,13 @@ public class FancyEggs extends JavaPlugin implements Listener {
         lore.add("");
         lore.add(lang.getColored("egg.income") + lang.color(Lang.GOLD + Lang.BOLD + df.format(egg.getCurrentIncome())));
         lore.add(lang.getColored("egg.upgrade_price") + lang.color(Lang.GOLD + Lang.BOLD + df.format(egg.getUpgradeCost())));
+        lore.add(lang.getColored("egg.sell_price") + lang.color(Lang.GOLD + Lang.BOLD + df.format(egg.getSellPrice())));
         lore.add("");
-        lore.add(lang.getColored("egg.shift_upgrade"));
-        lore.add(lang.getColored("egg.left_remove"));
+        lore.add(lang.getColored("egg.left_upgrade"));
+        lore.add(lang.getColored("egg.shift_sell"));
         meta.setLore(lore);
         item.setItemMeta(meta);
         return item;
-    }
-
-    // ============================
-    // LAGER MENÜ
-    // ============================
-    private void openStorageMenu(Player p) {
-        Inventory inv = Bukkit.createInventory(null, 54, lang.getColored("menu.storage.title"));
-
-        ItemStack border = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
-        ItemMeta borderMeta = border.getItemMeta();
-        borderMeta.setDisplayName(" ");
-        border.setItemMeta(borderMeta);
-        for (int slot : BORDER_SLOTS) inv.setItem(slot, border);
-
-        List<Egg> stored = playerStorage.get(p.getUniqueId());
-        if (stored != null) {
-            int i = 0;
-            for (Egg egg : stored) {
-                if (i >= EGG_SLOTS.length) break;
-                inv.setItem(EGG_SLOTS[i], createEggItem(egg));
-                i++;
-            }
-        }
-
-        p.openInventory(inv);
     }
 
     @EventHandler
@@ -335,7 +325,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
         String title = e.getView().getTitle();
 
-        // =========== HAUPT MENÜ ===========
         if (title.equals(lang.getColored("menu.title"))) {
             e.setCancelled(true);
             if (e.getCurrentItem() == null || e.getCurrentItem().getType() == Material.AIR) return;
@@ -367,8 +356,13 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 return;
             }
 
-            // ---- Egg im Menü angeklickt ----
-            if (e.getCurrentItem().getType() != Material.AIR) {
+            // ---- Egg angeklickt ----
+            if (e.getCurrentItem().getType() != Material.AIR
+                    && e.getCurrentItem().getType() != Material.LIGHT_GRAY_STAINED_GLASS_PANE
+                    && e.getCurrentItem().getType() != Material.LIME_STAINED_GLASS_PANE
+                    && e.getCurrentItem().getType() != Material.RED_STAINED_GLASS_PANE
+                    && e.getCurrentItem().getType() != Material.CHEST) {
+
                 List<Egg> eggs = playerEggs.get(p.getUniqueId());
                 if (eggs == null || eggs.isEmpty()) return;
 
@@ -380,7 +374,19 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 if (targetEgg == null) return;
 
                 if (e.isShiftClick()) {
-                    // UPGRADE
+                    // ============ VERKAUFEN ============
+                    double sellPrice = targetEgg.getSellPrice();
+                    econ.depositPlayer(p, sellPrice);
+                    eggs.remove(targetEgg);
+                    p.sendMessage(lang.color(lang.get("msg.sold")
+                            .replace("%egg%", targetEgg.type.name)
+                            .replace("%price%", df.format(sellPrice))));
+                    p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 0.8f);
+                    p.closeInventory();
+                    Bukkit.getScheduler().runTaskLater(this, () -> openEggsMenu(p), 1L);
+
+                } else if (e.isLeftClick()) {
+                    // ============ UPGRADEN ============
                     double cost = targetEgg.getUpgradeCost();
                     if (econ.getBalance(p) >= cost) {
                         econ.withdrawPlayer(p, cost);
@@ -393,44 +399,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
                     }
                     p.closeInventory();
                     Bukkit.getScheduler().runTaskLater(this, () -> openEggsMenu(p), 1L);
-                } else if (e.isLeftClick()) {
-                    // ABLEGEN -> ins Lager
-                    eggs.remove(targetEgg);
-                    playerStorage.computeIfAbsent(p.getUniqueId(), k -> new ArrayList<>()).add(targetEgg);
-                    p.sendMessage(lang.color(lang.get("msg.removed").replace("%egg%", targetEgg.type.name)));
-                    p.playSound(p.getLocation(), Sound.BLOCK_ANVIL_BREAK, 1f, 1f);
-                    p.closeInventory();
-                    Bukkit.getScheduler().runTaskLater(this, () -> openEggsMenu(p), 1L);
                 }
-            }
-        }
-
-        // =========== LAGER MENÜ ===========
-        else if (title.equals(lang.getColored("menu.storage.title"))) {
-            e.setCancelled(true);
-            if (e.getCurrentItem() == null || e.getCurrentItem().getType() == Material.AIR) return;
-            if (e.getCurrentItem().getType() == Material.LIGHT_GRAY_STAINED_GLASS_PANE) return;
-
-            // Rechtsklick -> zurück ins Hauptmenü (Egg wieder aktivieren)
-            if (e.isRightClick() || e.isShiftClick()) {
-                List<Egg> stored = playerStorage.get(p.getUniqueId());
-                if (stored == null || stored.isEmpty()) return;
-
-                String displayName = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName());
-                Egg target = null;
-                for (Egg egg : stored) {
-                    if (displayName.contains(egg.type.name)) { target = egg; break; }
-                }
-                if (target == null) return;
-
-                stored.remove(target);
-                playerEggs.computeIfAbsent(p.getUniqueId(), k -> new ArrayList<>()).add(target);
-                p.sendMessage(lang.color(lang.get("storage.equipped").replace("%egg%", target.type.name)));
-                p.playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_GENERIC, 1f, 1.2f);
-                p.closeInventory();
-                Bukkit.getScheduler().runTaskLater(this, () -> openStorageMenu(p), 1L);
-            } else {
-                p.sendMessage(lang.getColored("storage.hint"));
             }
         }
     }
@@ -457,20 +426,30 @@ public class FancyEggs extends JavaPlugin implements Listener {
         public double getUpgradeCost() {
             return type.baseUpgradeCost * Math.pow(type.upgradeMultiplier, level - 1);
         }
+
+        // Verkaufspreis = sellMultiplier * Upgrade-Preis (Standard: 4.0)
+        public double getSellPrice() {
+            return getUpgradeCost() * type.sellMultiplier;
+        }
     }
 
     public static class EggType {
-        public String name;
+        public String key;              // Config-Key (z.B. "Chicken_Egg")
+        public String name;             // Anzeigename (z.B. "Chicken Egg")
         public double baseIncome;
         public double baseUpgradeCost;
         public double upgradeMultiplier;
+        public double sellMultiplier;
         public Material icon;
 
-        public EggType(String name, double baseIncome, double baseUpgradeCost, double upgradeMultiplier, Material icon) {
+        public EggType(String key, String name, double baseIncome, double baseUpgradeCost,
+                       double upgradeMultiplier, double sellMultiplier, Material icon) {
+            this.key = key;
             this.name = name;
             this.baseIncome = baseIncome;
             this.baseUpgradeCost = baseUpgradeCost;
             this.upgradeMultiplier = upgradeMultiplier;
+            this.sellMultiplier = sellMultiplier;
             this.icon = icon;
         }
     }
