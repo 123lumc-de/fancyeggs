@@ -39,30 +39,37 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        if (!setupEconomy()) {
-            getLogger().severe("Vault nicht gefunden! FancyEggs wird deaktiviert.");
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
-        getServer().getPluginManager().registerEvents(this, this);
-        
-        // Starte den Timer für passives Einkommen (jede Sekunde)
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (playerEggs.containsKey(p.getUniqueId())) {
-                        double totalIncome = 0;
-                        for (Egg egg : playerEggs.get(p.getUniqueId())) {
-                            totalIncome += egg.getCurrentIncome();
-                        }
-                        if (totalIncome > 0) {
-                            econ.depositPlayer(p, totalIncome);
+        // Warte 1 Tick (1/20 Sekunde), damit Vault sicher geladen ist
+        getServer().getScheduler().runTaskLater(this, () -> {
+            if (!setupEconomy()) {
+                getLogger().severe("Vault nicht gefunden! FancyEggs wird deaktiviert.");
+                getServer().getPluginManager().disablePlugin(this);
+                return;
+            }
+            
+            // Erst wenn Vault da ist, Events registrieren und Timer starten
+            getServer().getPluginManager().registerEvents(this, this);
+            
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    for (Player p : Bukkit.getOnlinePlayers()) {
+                        if (playerEggs.containsKey(p.getUniqueId())) {
+                            double totalIncome = 0;
+                            for (Egg egg : playerEggs.get(p.getUniqueId())) {
+                                totalIncome += egg.getCurrentIncome();
+                            }
+                            if (totalIncome > 0) {
+                                econ.depositPlayer(p, totalIncome);
+                            }
                         }
                     }
                 }
-            }
-        }.runTaskTimer(this, 20L, 20L); // 20 Ticks = 1 Sekunde
+            }.runTaskTimer(this, 20L, 20L); 
+            
+            getLogger().info("FancyEggs erfolgreich geladen und mit Vault verbunden!");
+            
+        }, 1L); // 1 Tick Verzögerung
     }
 
     @Override
