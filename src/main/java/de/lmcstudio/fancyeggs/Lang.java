@@ -11,7 +11,6 @@ public class Lang {
     private final String lang;
     private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
 
-    // --- Farbpalette ---
     public static final String GOLD  = "&#FFD700";
     public static final String GRAY  = "&#AAAAAA";
     public static final String WHITE = "&#FFFFFF";
@@ -29,10 +28,8 @@ public class Lang {
     public String get(String key) {
         boolean en = lang.equals("en");
         switch (key) {
-            // ---- Menü Titel ----
             case "menu.title":          return GOLD + BOLD + (en ? "Eggs | Menu" : "Eggs | Menü");
 
-            // ---- Egg Item ----
             case "egg.desc":            return GRAY + (en ? "Description" : "Beschreibung");
             case "egg.level":           return AQUA + BOLD + "★ " + (en ? "LEVEL " : "LEVEL ");
             case "egg.income":          return GRAY + (en ? "Money / Second: " : "Geld / Sekunde: ") + GREEN + "$";
@@ -42,7 +39,6 @@ public class Lang {
             case "egg.shift_sell":      return RED + BOLD + "➤ " + (en ? "SHIFT-CLICK to sell" : "SHIFT-KLICK zum Verkaufen");
             case "egg.charged_tag":     return PINK + BOLD + "[CHARGED] ";
 
-            // ---- Chat Messages ----
             case "msg.no_permission":   return RED + (en ? "You don't have permission for this." : "Dazu hast du keine Rechte.");
             case "msg.give_usage":      return RED + (en ? "Usage: /fancyeggs give <player> <eggKey> [charged]" : "Nutzung: /fancyeggs give <Spieler> <EggKey> [charged]");
             case "msg.available":       return GOLD + BOLD + (en ? "Available: " : "Verfügbar: ") + RESET + WHITE;
@@ -57,7 +53,6 @@ public class Lang {
             case "msg.only_players":    return RED + (en ? "Only players can use this command." : "Nur Spieler können diesen Befehl nutzen.");
             case "msg.only_players_menu": return RED + (en ? "Only players can open the menu." : "Nur Spieler können das Menü öffnen.");
 
-            // ---- /eggs list ----
             case "list.header":         return GOLD + BOLD + (en ? "========== FancyEggs List ==========" : "========== FancyEggs Liste ==========");
             case "list.name":           return GOLD + BOLD + "▶ ";
             case "list.base_income":    return GRAY + (en ? "Base income: " : "Basis-Einkommen: ") + GREEN + "$";
@@ -65,7 +60,6 @@ public class Lang {
             case "list.multiplier":     return GRAY + (en ? "Multiplier: " : "Multiplikator: ") + AQUA + "x";
             case "list.footer":         return GOLD + BOLD + "===================================";
 
-            // ---- Auto-Collect Button ----
             case "autocollect.on_name":   return GREEN + BOLD + (en ? "AUTO-COLLECT: ON" : "AUTO-COLLECT: AN");
             case "autocollect.off_name":  return RED + BOLD + (en ? "AUTO-COLLECT: OFF" : "AUTO-COLLECT: AUS");
             case "autocollect.desc":      return GRAY + (en ? "Description" : "Beschreibung");
@@ -74,7 +68,6 @@ public class Lang {
             case "autocollect.off_text":  return WHITE + (en ? "Money accumulates in the chest." : "Geld sammelt sich in der Kiste an.");
             case "autocollect.click":     return GOLD + BOLD + "➤ " + (en ? "CLICK to toggle" : "KLICK zum Umschalten");
 
-            // ---- Pending Chest ----
             case "pending.name":          return GOLD + BOLD + (en ? "PENDING MONEY" : "AUSSTEHENDES GELD");
             case "pending.desc":          return GRAY + (en ? "Description" : "Beschreibung");
             case "pending.info":          return GOLD + BOLD + (en ? "Information:" : "Information:");
@@ -83,7 +76,6 @@ public class Lang {
             case "pending.collected":     return GREEN + BOLD + (en ? "Collected $%amount%!" : "$%amount% eingesammelt!");
             case "pending.empty":         return RED + (en ? "Nothing to collect." : "Nichts zum Einsammeln.");
 
-            // ---- Console ----
             case "console.vault_missing": return en ? "Vault not found! FancyEggs is disabling." : "Vault nicht gefunden! FancyEggs wird deaktiviert.";
             case "console.enabled":       return en ? "FancyEggs successfully loaded and connected to Vault!" : "FancyEggs erfolgreich geladen und mit Vault verbunden!";
 
