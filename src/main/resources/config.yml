@@ -1,0 +1,40 @@
+# ================================================
+#   FancyEggs - Konfiguration
+# ================================================
+
+# Sprache des Plugins
+# Verfügbar: "de" (Deutsch, Standard) oder "en" (English)
+language: de
+
+# ================================================
+#   Egg-Einstellungen
+# ================================================
+# Hier kannst du die Werte der Eggs anpassen.
+# base-income: Geld pro Sekunde auf Level 1
+# base-upgrade-cost: Preis für das erste Upgrade
+# upgrade-multiplier: Multiplikator pro Level
+# charged-multiplier: Bonus für "Charged" Eggs (1.25 = +25%)
+eggs:
+  Chicken:
+    base-income: 15.0
+    base-upgrade-cost: 25000.0
+    upgrade-multiplier: 1.5
+  Parrot:
+    base-income: 35.0
+    base-upgrade-cost: 50000.0
+    upgrade-multiplier: 1.5
+  Blaze:
+    base-income: 45.0
+    base-upgrade-cost: 100000.0
+    upgrade-multiplier: 1.5
+  Squid:
+    base-income: 80.0
+    base-upgrade-cost: 175000.0
+    upgrade-multiplier: 1.6
+  Warden:
+    base-income: 150.0
+    base-upgrade-cost: 250000.0
+    upgrade-multiplier: 1.8
+
+# Globaler Multiplikator für Charged Eggs
+charged-multiplier: 1.25
