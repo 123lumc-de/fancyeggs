@@ -1,5 +1,5 @@
 name: FancyEggs
-version: 1.3
+version: 1.4
 main: de.lmcstudio.fancyeggs.FancyEggs
 api-version: '1.21'
 softdepend: [Vault]
