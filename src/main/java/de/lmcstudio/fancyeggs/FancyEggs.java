@@ -231,7 +231,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
         ItemMeta meta = item.getItemMeta();
 
         String charged = egg.isCharged ? lang.getColored("egg.charged_tag") : "";
-        meta.setDisplayName(charged + ChatColor.YELLOW + egg.type.name);
+        meta.setDisplayName(charged + lang.color(Lang.GOLD + Lang.BOLD + egg.type.name));
 
         List<String> lore = new ArrayList<>();
         lore.add(lang.getColored("egg.desc"));
