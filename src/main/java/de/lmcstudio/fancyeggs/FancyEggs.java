@@ -179,10 +179,10 @@ public class FancyEggs extends JavaPlugin implements Listener {
         if (args.length > 0 && args[0].equalsIgnoreCase("list")) {
             sender.sendMessage(lang.getColored("list.header"));
             for (EggType type : eggTypes) {
-                sender.sendMessage(lang.getColored("list.name") + type.name);
-                sender.sendMessage(lang.getColored("list.base_income") + df.format(type.baseIncome) + "/s");
-                sender.sendMessage(lang.getColored("list.upgrade_cost") + df.format(type.baseUpgradeCost));
-                sender.sendMessage(lang.getColored("list.multiplier") + "x" + type.upgradeMultiplier);
+                sender.sendMessage(lang.getColored("list.name") + lang.color(Lang.GOLD + Lang.BOLD + type.name));
+                sender.sendMessage(lang.getColored("list.base_income") + lang.color(Lang.GOLD + Lang.BOLD + df.format(type.baseIncome)) + lang.color(Lang.WHITE) + "/s");
+                sender.sendMessage(lang.getColored("list.upgrade_cost") + lang.color(Lang.GOLD + Lang.BOLD + df.format(type.baseUpgradeCost)));
+                sender.sendMessage(lang.getColored("list.multiplier") + lang.color(Lang.GOLD + Lang.BOLD + type.upgradeMultiplier));
             }
             sender.sendMessage(lang.getColored("list.footer"));
             return true;
@@ -236,10 +236,10 @@ public class FancyEggs extends JavaPlugin implements Listener {
         List<String> lore = new ArrayList<>();
         lore.add(lang.getColored("egg.desc"));
         lore.add("");
-        lore.add(lang.getColored("egg.level") + egg.level + " ★");
+        lore.add(lang.getColored("egg.level") + lang.color(Lang.GOLD + Lang.BOLD + egg.level + " ★"));
         lore.add("");
-        lore.add(lang.getColored("egg.income") + df.format(egg.getCurrentIncome()));
-        lore.add(lang.getColored("egg.upgrade_price") + df.format(egg.getUpgradeCost()));
+        lore.add(lang.getColored("egg.income") + lang.color(Lang.GOLD + Lang.BOLD + df.format(egg.getCurrentIncome())));
+        lore.add(lang.getColored("egg.upgrade_price") + lang.color(Lang.GOLD + Lang.BOLD + df.format(egg.getUpgradeCost())));
         lore.add("");
         lore.add(lang.getColored("egg.shift_upgrade"));
         lore.add(lang.getColored("egg.left_remove"));
