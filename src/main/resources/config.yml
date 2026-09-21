@@ -15,13 +15,11 @@ language: de
 #
 # Eigenschaften:
 #   display-name:   Name, der im GUI angezeigt wird
-#   icon:           Minecraft-Material (Bukkit Material-Name)
+#   icon:           Minecraft-Material (Bukkit Material-Name, z.B. CHICKEN_SPAWN_EGG)
 #   base-income:    Geld pro Sekunde auf Level 1
 #   base-upgrade-cost: Preis für das erste Upgrade
 #   upgrade-multiplier: Multiplikator pro Level
 #   sell-multiplier: Multiplikator für Verkaufspreis (4.0 = 4x Upgrade-Preis)
-#
-# Icon-Materialien: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
 # ================================================
 
 eggs:
@@ -29,7 +27,7 @@ eggs:
     display-name: "Chicken Egg"
     icon: CHICKEN_SPAWN_EGG
     base-income: 15.0
-    base-upgrade-cost: 25000.0
+    base-upgrade-cost: 5000.0
     upgrade-multiplier: 1.5
     sell-multiplier: 4.0
 
@@ -37,7 +35,7 @@ eggs:
     display-name: "Parrot Egg"
     icon: PARROT_SPAWN_EGG
     base-income: 35.0
-    base-upgrade-cost: 50000.0
+    base-upgrade-cost: 10000.0
     upgrade-multiplier: 1.5
     sell-multiplier: 4.0
 
@@ -45,7 +43,7 @@ eggs:
     display-name: "Blaze Egg"
     icon: BLAZE_SPAWN_EGG
     base-income: 45.0
-    base-upgrade-cost: 100000.0
+    base-upgrade-cost: 20000.0
     upgrade-multiplier: 1.5
     sell-multiplier: 4.0
 
@@ -53,7 +51,7 @@ eggs:
     display-name: "Squid Egg"
     icon: SQUID_SPAWN_EGG
     base-income: 80.0
-    base-upgrade-cost: 175000.0
+    base-upgrade-cost: 35000.0
     upgrade-multiplier: 1.6
     sell-multiplier: 4.0
 
@@ -61,28 +59,26 @@ eggs:
     display-name: "Warden Egg"
     icon: WARDEN_SPAWN_EGG
     base-income: 150.0
-    base-upgrade-cost: 250000.0
+    base-upgrade-cost: 50000.0
     upgrade-multiplier: 1.8
     sell-multiplier: 4.0
 
 # ================================================
 #   SAISONALE EGGS (Beispiele - auskommentiert)
 # ================================================
-# Entkommentiere sie einfach, um sie zu aktivieren.
-#
 #  Halloween_Egg:
 #    display-name: "Halloween Egg"
-#    icon: JACK_O_LANTERN
+#    icon: ZOMBIE_SPAWN_EGG
 #    base-income: 200.0
-#    base-upgrade-cost: 500000.0
+#    base-upgrade-cost: 75000.0
 #    upgrade-multiplier: 1.7
 #    sell-multiplier: 4.0
 #
 #  Christmas_Egg:
 #    display-name: "Christmas Egg"
-#    icon: SNOWBALL
+#    icon: SNOW_GOLEM_SPAWN_EGG
 #    base-income: 300.0
-#    base-upgrade-cost: 750000.0
+#    base-upgrade-cost: 100000.0
 #    upgrade-multiplier: 1.8
 #    sell-multiplier: 4.0
 #
@@ -90,7 +86,7 @@ eggs:
 #    display-name: "Easter Egg"
 #    icon: RABBIT_SPAWN_EGG
 #    base-income: 120.0
-#    base-upgrade-cost: 300000.0
+#    base-upgrade-cost: 60000.0
 #    upgrade-multiplier: 1.6
 #    sell-multiplier: 4.0
 
