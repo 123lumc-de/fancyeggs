@@ -9,6 +9,7 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -27,31 +28,28 @@ import java.util.stream.Collectors;
 public class FancyEggs extends JavaPlugin implements Listener {
 
     private Economy econ = null;
+    private Lang lang;
+    private double chargedMultiplier = 1.25;
     private final Map<UUID, List<Egg>> playerEggs = new HashMap<>();
     private final DecimalFormat df = new DecimalFormat("#,##0.00");
 
-    // Egg-Definitionen (Name, Basis-Einkommen, Upgrade-Basis-Kosten, Upgrade-Multiplikator, Icon)
-    private final List<EggType> eggTypes = Arrays.asList(
-        new EggType("Chicken Egg", 15.0, 25000.0, 1.5, Material.CHICKEN_SPAWN_EGG),
-        new EggType("Parrot Egg", 35.0, 50000.0, 1.5, Material.PARROT_SPAWN_EGG),
-        new EggType("Blaze Egg", 45.0, 100000.0, 1.5, Material.BLAZE_SPAWN_EGG),
-        new EggType("Squid Egg", 80.0, 175000.0, 1.6, Material.SQUID_SPAWN_EGG),
-        new EggType("Warden Egg", 150.0, 250000.0, 1.8, Material.WARDEN_SPAWN_EGG)
-    );
+    private final List<EggType> eggTypes = new ArrayList<>();
 
     @Override
     public void onEnable() {
-        // Warte 1 Tick, damit Vault sicher geladen ist
+        // Config speichern & laden
+        saveDefaultConfig();
+        reloadConfig();
+        loadConfigValues();
+
         getServer().getScheduler().runTaskLater(this, () -> {
             if (!setupEconomy()) {
-                getLogger().severe("Vault nicht gefunden! FancyEggs wird deaktiviert.");
+                getLogger().severe(lang.get("console.vault_missing"));
                 getServer().getPluginManager().disablePlugin(this);
                 return;
             }
-
             getServer().getPluginManager().registerEvents(this, this);
 
-            // Passives Einkommen jede Sekunde
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -59,27 +57,69 @@ public class FancyEggs extends JavaPlugin implements Listener {
                         List<Egg> eggs = playerEggs.get(p.getUniqueId());
                         if (eggs == null || eggs.isEmpty()) continue;
                         double totalIncome = 0;
-                        for (Egg egg : eggs) {
-                            totalIncome += egg.getCurrentIncome();
-                        }
-                        if (totalIncome > 0) {
-                            econ.depositPlayer(p, totalIncome);
-                        }
+                        for (Egg egg : eggs) totalIncome += egg.getCurrentIncome();
+                        if (totalIncome > 0) econ.depositPlayer(p, totalIncome);
                     }
                 }
             }.runTaskTimer(this, 20L, 20L);
 
-            getLogger().info("FancyEggs erfolgreich geladen und mit Vault verbunden!");
+            getLogger().info(lang.get("console.enabled"));
         }, 1L);
 
-        // bStats Setup (Plugin-ID 34188)
-        int pluginId = 34188;
-        Metrics metrics = new Metrics(this, pluginId);
+        // bStats
+        Metrics metrics = new Metrics(this, 34188);
+        metrics.addCustomChart(new SimplePie("language", () -> lang.get("language").equals("en") ? "en" : "de"));
         metrics.addCustomChart(new SimplePie("eggs_owned_chart", () -> {
             int total = 0;
             for (List<Egg> list : playerEggs.values()) total += list.size();
             return String.valueOf(total);
         }));
+    }
+
+    private void loadConfigValues() {
+        this.lang = new Lang(getConfig());
+        this.chargedMultiplier = getConfig().getDouble("charged-multiplier", 1.25);
+        eggTypes.clear();
+
+        // Chicken
+        eggTypes.add(new EggType(
+            "Chicken Egg",
+            getConfig().getDouble("eggs.Chicken.base-income", 15.0),
+            getConfig().getDouble("eggs.Chicken.base-upgrade-cost", 25000.0),
+            getConfig().getDouble("eggs.Chicken.upgrade-multiplier", 1.5),
+            Material.CHICKEN_SPAWN_EGG));
+
+        // Parrot
+        eggTypes.add(new EggType(
+            "Parrot Egg",
+            getConfig().getDouble("eggs.Parrot.base-income", 35.0),
+            getConfig().getDouble("eggs.Parrot.base-upgrade-cost", 50000.0),
+            getConfig().getDouble("eggs.Parrot.upgrade-multiplier", 1.5),
+            Material.PARROT_SPAWN_EGG));
+
+        // Blaze
+        eggTypes.add(new EggType(
+            "Blaze Egg",
+            getConfig().getDouble("eggs.Blaze.base-income", 45.0),
+            getConfig().getDouble("eggs.Blaze.base-upgrade-cost", 100000.0),
+            getConfig().getDouble("eggs.Blaze.upgrade-multiplier", 1.5),
+            Material.BLAZE_SPAWN_EGG));
+
+        // Squid
+        eggTypes.add(new EggType(
+            "Squid Egg",
+            getConfig().getDouble("eggs.Squid.base-income", 80.0),
+            getConfig().getDouble("eggs.Squid.base-upgrade-cost", 175000.0),
+            getConfig().getDouble("eggs.Squid.upgrade-multiplier", 1.6),
+            Material.SQUID_SPAWN_EGG));
+
+        // Warden
+        eggTypes.add(new EggType(
+            "Warden Egg",
+            getConfig().getDouble("eggs.Warden.base-income", 150.0),
+            getConfig().getDouble("eggs.Warden.base-upgrade-cost", 250000.0),
+            getConfig().getDouble("eggs.Warden.upgrade-multiplier", 1.8),
+            Material.WARDEN_SPAWN_EGG));
     }
 
     @Override
@@ -97,73 +137,79 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        // /fancyeggs give <Spieler> <EggName> [charged]  -> Admin
+
+        // /fancyeggs give <Spieler> <EggName> [charged]
         if (args.length > 0 && args[0].equalsIgnoreCase("give")) {
             if (!sender.hasPermission("fancyeggs.admin")) {
-                sender.sendMessage(ChatColor.RED + "Dazu hast du keine Rechte.");
+                sender.sendMessage(lang.getColored("msg.no_permission"));
                 return true;
             }
             if (args.length < 3) {
-                sender.sendMessage(ChatColor.RED + "Nutzung: /fancyeggs give <Spieler> <EggName> [charged]");
-                sender.sendMessage(ChatColor.YELLOW + "Verfügbar: " + eggTypes.stream()
+                sender.sendMessage(lang.getColored("msg.give_usage"));
+                sender.sendMessage(lang.getColored("msg.available") + eggTypes.stream()
                         .map(t -> t.name.replace(" ", "_")).collect(Collectors.joining(", ")));
                 return true;
             }
             Player target = Bukkit.getPlayer(args[1]);
             if (target == null) {
-                sender.sendMessage(ChatColor.RED + "Spieler nicht gefunden.");
+                sender.sendMessage(lang.getColored("msg.player_not_found"));
                 return true;
             }
             String eggName = args[2].replace("_", " ");
             EggType type = eggTypes.stream().filter(t -> t.name.equalsIgnoreCase(eggName)).findFirst().orElse(null);
             if (type == null) {
-                sender.sendMessage(ChatColor.RED + "Egg-Typ nicht gefunden.");
+                sender.sendMessage(lang.getColored("msg.egg_not_found"));
                 return true;
             }
             boolean isCharged = args.length > 3 && args[3].equalsIgnoreCase("charged");
             playerEggs.computeIfAbsent(target.getUniqueId(), k -> new ArrayList<>()).add(new Egg(type, 1, isCharged));
-            sender.sendMessage(ChatColor.GREEN + "Du hast " + target.getName() + " ein " + type.name
-                    + (isCharged ? " (Charged)" : "") + " gegeben.");
-            target.sendMessage(ChatColor.GREEN + "Du hast ein " + type.name
-                    + (isCharged ? " (Charged)" : "") + " erhalten!");
+
+            String chargedSuffix = isCharged ? lang.getColored("msg.charged_suffix") : "";
+            sender.sendMessage(lang.color(lang.get("msg.give_sender")
+                    .replace("%player%", target.getName())
+                    .replace("%egg%", type.name)
+                    .replace("%charged%", chargedSuffix)));
+            target.sendMessage(lang.color(lang.get("msg.give_target")
+                    .replace("%egg%", type.name)
+                    .replace("%charged%", chargedSuffix)));
             return true;
         }
 
-        // /fancyeggs list -> Alle Egg-Typen anzeigen
+        // /fancyeggs list
         if (args.length > 0 && args[0].equalsIgnoreCase("list")) {
-            sender.sendMessage(ChatColor.GOLD + "========== " + ChatColor.YELLOW + "FancyEggs Liste" + ChatColor.GOLD + " ==========");
+            sender.sendMessage(lang.getColored("list.header"));
             for (EggType type : eggTypes) {
-                sender.sendMessage(ChatColor.YELLOW + "▶ " + type.name);
-                sender.sendMessage(ChatColor.GRAY + "  Basis-Einkommen: " + ChatColor.GREEN + "$" + df.format(type.baseIncome) + "/s");
-                sender.sendMessage(ChatColor.GRAY + "  Upgrade-Kosten: " + ChatColor.RED + "$" + df.format(type.baseUpgradeCost));
-                sender.sendMessage(ChatColor.GRAY + "  Multiplikator: " + ChatColor.AQUA + "x" + type.upgradeMultiplier);
+                sender.sendMessage(lang.getColored("list.name") + type.name);
+                sender.sendMessage(lang.getColored("list.base_income") + df.format(type.baseIncome) + "/s");
+                sender.sendMessage(lang.getColored("list.upgrade_cost") + df.format(type.baseUpgradeCost));
+                sender.sendMessage(lang.getColored("list.multiplier") + "x" + type.upgradeMultiplier);
             }
-            sender.sendMessage(ChatColor.GOLD + "===================================");
+            sender.sendMessage(lang.getColored("list.footer"));
             return true;
         }
 
-        // Standard /fancyeggs -> Menü öffnen
+        // Standard -> Menü
         if (sender instanceof Player) {
             openEggsMenu((Player) sender);
         } else {
-            sender.sendMessage("Nur Spieler können das Menü öffnen.");
+            sender.sendMessage(lang.getColored("msg.only_players_menu"));
         }
         return true;
     }
 
     private void openEggsMenu(Player p) {
-        Inventory inv = Bukkit.createInventory(null, 54, "Eggs | Menü");
+        Inventory inv = Bukkit.createInventory(null, 54, lang.getColored("menu.title"));
 
         ItemStack lagerItem = new ItemStack(Material.CHEST);
         ItemMeta lagerMeta = lagerItem.getItemMeta();
-        lagerMeta.setDisplayName(ChatColor.GOLD + "EGGS LAGER");
+        lagerMeta.setDisplayName(lang.getColored("storage.name"));
         lagerMeta.setLore(Arrays.asList(
-            ChatColor.GRAY + "Beschreibung",
+            lang.getColored("storage.desc"),
             "",
-            ChatColor.YELLOW + "Information:",
-            ChatColor.WHITE + "Klicke hier um andere Eggs auszurüsten.",
+            lang.getColored("storage.info"),
+            lang.getColored("storage.click"),
             "",
-            ChatColor.GOLD + "➤ Deine Eggs: " + (playerEggs.getOrDefault(p.getUniqueId(), new ArrayList<>()).size())
+            lang.getColored("storage.count") + (playerEggs.getOrDefault(p.getUniqueId(), new ArrayList<>()).size())
         ));
         lagerItem.setItemMeta(lagerMeta);
         inv.setItem(49, lagerItem);
@@ -184,19 +230,19 @@ public class FancyEggs extends JavaPlugin implements Listener {
         ItemStack item = new ItemStack(egg.type.icon);
         ItemMeta meta = item.getItemMeta();
 
-        String charged = egg.isCharged ? ChatColor.LIGHT_PURPLE + "[CHARGED] " : "";
+        String charged = egg.isCharged ? lang.getColored("egg.charged_tag") : "";
         meta.setDisplayName(charged + ChatColor.YELLOW + egg.type.name);
 
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.GRAY + "Beschreibung");
+        lore.add(lang.getColored("egg.desc"));
         lore.add("");
-        lore.add(ChatColor.AQUA + "★ LEVEL " + egg.level + " ★");
+        lore.add(lang.getColored("egg.level") + egg.level + " ★");
         lore.add("");
-        lore.add(ChatColor.GREEN + "✿ Geld / Sekunde: $" + df.format(egg.getCurrentIncome()));
-        lore.add(ChatColor.RED + "$ Upgrade Preis: $" + df.format(egg.getUpgradeCost()));
+        lore.add(lang.getColored("egg.income") + df.format(egg.getCurrentIncome()));
+        lore.add(lang.getColored("egg.upgrade_price") + df.format(egg.getUpgradeCost()));
         lore.add("");
-        lore.add(ChatColor.YELLOW + "➤ SHIFT-KLICK zum Upgraden");
-        lore.add(ChatColor.RED + "➤ LEFT-KLICK zum Ablegen");
+        lore.add(lang.getColored("egg.shift_upgrade"));
+        lore.add(lang.getColored("egg.left_remove"));
         meta.setLore(lore);
         item.setItemMeta(meta);
         return item;
@@ -207,7 +253,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
         if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
 
-        if (e.getView().getTitle().equals("Eggs | Menü")) {
+        if (e.getView().getTitle().equals(lang.getColored("menu.title"))) {
             e.setCancelled(true);
             if (e.getCurrentItem() == null) return;
 
@@ -237,16 +283,16 @@ public class FancyEggs extends JavaPlugin implements Listener {
                         econ.withdrawPlayer(p, cost);
                         targetEgg.level++;
                         p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-                        p.sendMessage(ChatColor.GREEN + "Egg upgraded! Neues Level: " + targetEgg.level);
+                        p.sendMessage(lang.getColored("msg.upgraded") + targetEgg.level);
                     } else {
-                        p.sendMessage(ChatColor.RED + "Du hast nicht genug Geld! Benötigt: $" + df.format(cost));
+                        p.sendMessage(lang.getColored("msg.not_enough") + df.format(cost));
                         p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     }
                     p.closeInventory();
                     openEggsMenu(p);
                 } else if (e.isLeftClick()) {
                     eggs.remove(targetEgg);
-                    p.sendMessage(ChatColor.RED + "Du hast das " + targetEgg.type.name + " abgelegt.");
+                    p.sendMessage(lang.color(lang.get("msg.removed").replace("%egg%", targetEgg.type.name)));
                     p.playSound(p.getLocation(), Sound.BLOCK_ANVIL_BREAK, 1f, 1f);
                     p.closeInventory();
                     openEggsMenu(p);
@@ -254,19 +300,19 @@ public class FancyEggs extends JavaPlugin implements Listener {
             }
         }
 
-        if (e.getView().getTitle().equals("Eggs | Lager")) {
+        if (e.getView().getTitle().equals(lang.getColored("menu.storage.title"))) {
             e.setCancelled(true);
             if (e.getCurrentItem() == null) return;
 
             if (e.getCurrentItem().getType() != Material.AIR
                     && e.getCurrentItem().getType() != Material.GRAY_STAINED_GLASS_PANE) {
-                p.sendMessage(ChatColor.YELLOW + "Dieses Egg ist bereits in deinem Lager. Nutze /fancyeggs um es zu verwalten.");
+                p.sendMessage(lang.getColored("msg.already_storage"));
             }
         }
     }
 
     private void openInventoryMenu(Player p) {
-        Inventory inv = Bukkit.createInventory(null, 54, "Eggs | Lager");
+        Inventory inv = Bukkit.createInventory(null, 54, lang.getColored("menu.storage.title"));
         List<Egg> eggs = playerEggs.get(p.getUniqueId());
         if (eggs != null) {
             int slot = 0;
@@ -280,16 +326,14 @@ public class FancyEggs extends JavaPlugin implements Listener {
         ItemMeta fillerMeta = filler.getItemMeta();
         fillerMeta.setDisplayName(" ");
         filler.setItemMeta(fillerMeta);
-        for (int i = 45; i < 54; i++) {
-            inv.setItem(i, filler);
-        }
+        for (int i = 45; i < 54; i++) inv.setItem(i, filler);
         p.openInventory(inv);
     }
 
     // ============================
     // Egg-Klassen
     // ============================
-    public static class Egg {
+    public class Egg {
         public EggType type;
         public int level;
         public boolean isCharged;
@@ -302,7 +346,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
         public double getCurrentIncome() {
             double base = type.baseIncome * Math.pow(type.upgradeMultiplier, level - 1);
-            return isCharged ? base * 1.25 : base;
+            return isCharged ? base * chargedMultiplier : base;
         }
 
         public double getUpgradeCost() {
