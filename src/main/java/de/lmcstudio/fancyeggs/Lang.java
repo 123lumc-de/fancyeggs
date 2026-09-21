@@ -12,14 +12,14 @@ public class Lang {
     private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
 
     // --- Farbpalette ---
-    public static final String GOLD  = "&#FFD700"; // Titel, Namen, Werte
-    public static final String GRAY  = "&#AAAAAA"; // Labels wie "Beschreibung"
-    public static final String WHITE = "&#FFFFFF"; // normale Werte
-    public static final String GREEN = "&#55FF55"; // Einkommen
-    public static final String RED   = "&#FF5555"; // Kosten, negativ
-    public static final String AQUA  = "&#55FFFF"; // Level
-    public static final String PINK  = "&#FF55FF"; // Charged
-    public static final String BOLD  = "&l";       // Fett
+    public static final String GOLD  = "&#FFD700";
+    public static final String GRAY  = "&#AAAAAA";
+    public static final String WHITE = "&#FFFFFF";
+    public static final String GREEN = "&#55FF55";
+    public static final String RED   = "&#FF5555";
+    public static final String AQUA  = "&#55FFFF";
+    public static final String PINK  = "&#FF55FF";
+    public static final String BOLD  = "&l";
     public static final String RESET = "&r";
 
     public Lang(FileConfiguration config) {
@@ -27,26 +27,19 @@ public class Lang {
     }
 
     public String get(String key) {
-                boolean en = lang.equals("en");
+        boolean en = lang.equals("en");
         switch (key) {
             // ---- Menü Titel ----
             case "menu.title":          return GOLD + BOLD + (en ? "Eggs | Menu"    : "Eggs | Menü");
-            case "menu.storage.title":  return GOLD + BOLD + (en ? "Eggs | Storage" : "Eggs | Lager");
-
-            // ---- Storage Item ----
-            case "storage.name":        return GOLD + BOLD + (en ? "EGGS STORAGE" : "EGGS LAGER");
-            case "storage.desc":        return GRAY + (en ? "Description"  : "Beschreibung");
-            case "storage.info":        return GOLD + BOLD + (en ? "Information:" : "Information:");
-            case "storage.click":       return WHITE + (en ? "Click here to equip other eggs." : "Klicke hier um andere Eggs auszurüsten.");
-            case "storage.count":       return GOLD + BOLD + (en ? "➤ Your Eggs: " : "➤ Deine Eggs: ");
 
             // ---- Egg Item ----
             case "egg.desc":            return GRAY + (en ? "Description" : "Beschreibung");
             case "egg.level":           return AQUA + BOLD + "★ " + (en ? "LEVEL " : "LEVEL ");
             case "egg.income":          return GRAY + (en ? "Money / Second: " : "Geld / Sekunde: ") + GREEN + "$";
             case "egg.upgrade_price":   return GRAY + (en ? "Upgrade Price: " : "Upgrade Preis: ") + RED + "$";
-            case "egg.shift_upgrade":   return GOLD + BOLD + "➤ " + (en ? "SHIFT-CLICK to upgrade" : "SHIFT-KLICK zum Upgraden");
-            case "egg.left_remove":     return RED + BOLD + "➤ " + (en ? "LEFT-CLICK to remove" : "LEFT-KLICK zum Ablegen");
+            case "egg.sell_price":      return GRAY + (en ? "Sell Price: " : "Verkaufspreis: ") + RED + "$";
+            case "egg.left_upgrade":    return GOLD + BOLD + "➤ " + (en ? "LEFT-CLICK to upgrade" : "LEFT-KLICK zum Upgraden");
+            case "egg.shift_sell":      return RED + BOLD + "➤ " + (en ? "SHIFT-CLICK to sell" : "SHIFT-KLICK zum Verkaufen");
             case "egg.charged_tag":     return PINK + BOLD + "[CHARGED] ";
 
             // ---- Chat Messages ----
@@ -60,8 +53,7 @@ public class Lang {
             case "msg.charged_suffix":  return PINK + BOLD + " (Charged)";
             case "msg.upgraded":        return GOLD + BOLD + (en ? "Egg upgraded! New Level: " : "Egg upgraded! Neues Level: ") + AQUA;
             case "msg.not_enough":      return RED + (en ? "You don't have enough money! Needed: $" : "Du hast nicht genug Geld! Benötigt: $");
-            case "msg.removed":         return RED + (en ? "You removed the %egg%." : "Du hast das %egg% abgelegt.");
-            case "msg.already_storage": return GOLD + (en ? "This egg is already in your storage. Use /fancyeggs to manage it." : "Dieses Egg ist bereits in deinem Lager. Nutze /fancyeggs um es zu verwalten.");
+            case "msg.sold":            return GOLD + BOLD + (en ? "Sold %egg% for $%price%!" : "%egg% für $%price% verkauft!");
             case "msg.only_players":    return RED + (en ? "Only players can use this command." : "Nur Spieler können diesen Befehl nutzen.");
             case "msg.only_players_menu": return RED + (en ? "Only players can open the menu." : "Nur Spieler können das Menü öffnen.");
 
@@ -82,7 +74,7 @@ public class Lang {
             case "autocollect.off_text":  return WHITE + (en ? "Money accumulates in the chest." : "Geld sammelt sich in der Kiste an.");
             case "autocollect.click":     return GOLD + BOLD + "➤ " + (en ? "CLICK to toggle" : "KLICK zum Umschalten");
 
-// ---- Pending Chest ----
+            // ---- Pending Chest ----
             case "pending.name":          return GOLD + BOLD + (en ? "PENDING MONEY" : "AUSSTEHENDES GELD");
             case "pending.desc":          return GRAY + (en ? "Description" : "Beschreibung");
             case "pending.info":          return GOLD + BOLD + (en ? "Information:" : "Information:");
@@ -90,10 +82,6 @@ public class Lang {
             case "pending.click":         return GOLD + BOLD + "➤ " + (en ? "CLICK to collect" : "KLICK zum Einsammeln");
             case "pending.collected":     return GREEN + BOLD + (en ? "Collected $%amount%!" : "$%amount% eingesammelt!");
             case "pending.empty":         return RED + (en ? "Nothing to collect." : "Nichts zum Einsammeln.");
-
-// ---- Storage Menu ----
-            case "storage.equipped":      return GREEN + BOLD + (en ? "Equipped %egg%!" : "%egg% ausgerüstet!");
-            case "storage.hint":          return GOLD + (en ? "Right-click or Shift-click to equip." : "Rechtsklick oder Shift-Klick zum Ausrüsten.");
 
             // ---- Console ----
             case "console.vault_missing": return en ? "Vault not found! FancyEggs is disabling." : "Vault nicht gefunden! FancyEggs wird deaktiviert.";
@@ -104,7 +92,6 @@ public class Lang {
     }
 
     public String color(String s) {
-        // Hex-Codes konvertieren
         Matcher matcher = HEX_PATTERN.matcher(s);
         StringBuffer buffer = new StringBuffer();
         while (matcher.find()) {
@@ -112,7 +99,6 @@ public class Lang {
         }
         matcher.appendTail(buffer);
 
-        // Klassische Codes (&l, &r, &c etc.) konvertieren
         return org.bukkit.ChatColor.translateAlternateColorCodes('&', buffer.toString());
     }
 
