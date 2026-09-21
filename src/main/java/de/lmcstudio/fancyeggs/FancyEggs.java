@@ -9,7 +9,6 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -30,25 +29,45 @@ public class FancyEggs extends JavaPlugin implements Listener {
     private Economy econ = null;
     private Lang lang;
     private double chargedMultiplier = 1.25;
-    private final Map<UUID, List<Egg>> playerEggs = new HashMap<>();
     private final DecimalFormat df = new DecimalFormat("#,##0.00");
+
+    // Aktive Eggs (im Menü sichtbar)
+    private final Map<UUID, List<Egg>> playerEggs = new HashMap<>();
+    // Lager (abgelegte Eggs)
+    private final Map<UUID, List<Egg>> playerStorage = new HashMap<>();
+    // Auto-Collect Status
+    private final Map<UUID, Boolean> autoCollect = new HashMap<>();
+    // Aufgesammeltes Geld (wenn Auto-Collect aus)
+    private final Map<UUID, Double> pendingMoney = new HashMap<>();
 
     private final List<EggType> eggTypes = new ArrayList<>();
 
+    // ==== GUI Slots ====
+    private static final int[] BORDER_SLOTS = {
+        0,1,2,3,4,5,6,7,8,        // Reihe 1
+        9,17,                     // Reihe 2 (links/rechts)
+        18,26,                    // Reihe 3
+        27,35,                    // Reihe 4
+        36,44,                    // Reihe 5
+        45,46,47,48,49,50,51,52,53 // Reihe 6
+    };
+    private static final int SLOT_AUTOCOLLECT = 49;
+    private static final int SLOT_INFO = 4;
+    private static final int[] EGG_SLOTS = {10,11,12,13,14,15,16, 19,20,21,22,23,24,25, 28,29,30,31,32,33,34};
+
     @Override
     public void onEnable() {
-        // Config speichern & laden
         saveDefaultConfig();
         reloadConfig();
-        loadConfigValues();
 
         getServer().getScheduler().runTaskLater(this, () -> {
             if (!setupEconomy()) {
-                getLogger().severe(lang.get("console.vault_missing"));
+                getLogger().severe("Vault nicht gefunden! FancyEggs wird deaktiviert.");
                 getServer().getPluginManager().disablePlugin(this);
                 return;
             }
             getServer().getPluginManager().registerEvents(this, this);
+            loadConfigValues();
 
             new BukkitRunnable() {
                 @Override
@@ -58,22 +77,34 @@ public class FancyEggs extends JavaPlugin implements Listener {
                         if (eggs == null || eggs.isEmpty()) continue;
                         double totalIncome = 0;
                         for (Egg egg : eggs) totalIncome += egg.getCurrentIncome();
-                        if (totalIncome > 0) econ.depositPlayer(p, totalIncome);
+                        if (totalIncome <= 0) continue;
+
+                        boolean auto = autoCollect.getOrDefault(p.getUniqueId(), true);
+                        if (auto) {
+                            econ.depositPlayer(p, totalIncome);
+                        } else {
+                            pendingMoney.merge(p.getUniqueId(), totalIncome, Double::sum);
+                        }
                     }
                 }
             }.runTaskTimer(this, 20L, 20L);
 
-            getLogger().info(lang.get("console.enabled"));
+            getLogger().info("FancyEggs erfolgreich geladen und mit Vault verbunden!");
         }, 1L);
 
-        // bStats
-        Metrics metrics = new Metrics(this, 34188);
-        metrics.addCustomChart(new SimplePie("language", () -> lang.get("language").equals("en") ? "en" : "de"));
-        metrics.addCustomChart(new SimplePie("eggs_owned_chart", () -> {
-            int total = 0;
-            for (List<Egg> list : playerEggs.values()) total += list.size();
-            return String.valueOf(total);
-        }));
+        // bStats Setup
+        try {
+            Metrics metrics = new Metrics(this, 34188);
+            metrics.addCustomChart(new SimplePie("language", () -> getConfig().getString("language", "de")));
+            metrics.addCustomChart(new SimplePie("eggs_owned_chart", () -> {
+                int total = 0;
+                for (List<Egg> list : playerEggs.values()) total += list.size();
+                return String.valueOf(total);
+            }));
+            getLogger().info("bStats erfolgreich aktiviert (ID: 34188).");
+        } catch (Throwable t) {
+            getLogger().warning("bStats konnte nicht geladen werden: " + t.getMessage());
+        }
     }
 
     private void loadConfigValues() {
@@ -81,41 +112,31 @@ public class FancyEggs extends JavaPlugin implements Listener {
         this.chargedMultiplier = getConfig().getDouble("charged-multiplier", 1.25);
         eggTypes.clear();
 
-        // Chicken
-        eggTypes.add(new EggType(
-            "Chicken Egg",
+        eggTypes.add(new EggType("Chicken Egg",
             getConfig().getDouble("eggs.Chicken.base-income", 15.0),
             getConfig().getDouble("eggs.Chicken.base-upgrade-cost", 25000.0),
             getConfig().getDouble("eggs.Chicken.upgrade-multiplier", 1.5),
             Material.CHICKEN_SPAWN_EGG));
 
-        // Parrot
-        eggTypes.add(new EggType(
-            "Parrot Egg",
+        eggTypes.add(new EggType("Parrot Egg",
             getConfig().getDouble("eggs.Parrot.base-income", 35.0),
             getConfig().getDouble("eggs.Parrot.base-upgrade-cost", 50000.0),
             getConfig().getDouble("eggs.Parrot.upgrade-multiplier", 1.5),
             Material.PARROT_SPAWN_EGG));
 
-        // Blaze
-        eggTypes.add(new EggType(
-            "Blaze Egg",
+        eggTypes.add(new EggType("Blaze Egg",
             getConfig().getDouble("eggs.Blaze.base-income", 45.0),
             getConfig().getDouble("eggs.Blaze.base-upgrade-cost", 100000.0),
             getConfig().getDouble("eggs.Blaze.upgrade-multiplier", 1.5),
             Material.BLAZE_SPAWN_EGG));
 
-        // Squid
-        eggTypes.add(new EggType(
-            "Squid Egg",
+        eggTypes.add(new EggType("Squid Egg",
             getConfig().getDouble("eggs.Squid.base-income", 80.0),
             getConfig().getDouble("eggs.Squid.base-upgrade-cost", 175000.0),
             getConfig().getDouble("eggs.Squid.upgrade-multiplier", 1.6),
             Material.SQUID_SPAWN_EGG));
 
-        // Warden
-        eggTypes.add(new EggType(
-            "Warden Egg",
+        eggTypes.add(new EggType("Warden Egg",
             getConfig().getDouble("eggs.Warden.base-income", 150.0),
             getConfig().getDouble("eggs.Warden.base-upgrade-cost", 250000.0),
             getConfig().getDouble("eggs.Warden.upgrade-multiplier", 1.8),
@@ -124,7 +145,15 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        // Pending-Money noch auszahlen
+        for (Map.Entry<UUID, Double> entry : pendingMoney.entrySet()) {
+            Player p = Bukkit.getPlayer(entry.getKey());
+            if (p != null && econ != null) econ.depositPlayer(p, entry.getValue());
+        }
         playerEggs.clear();
+        playerStorage.clear();
+        pendingMoney.clear();
+        autoCollect.clear();
     }
 
     private boolean setupEconomy() {
@@ -138,7 +167,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
-        // /fancyeggs give <Spieler> <EggName> [charged]
         if (args.length > 0 && args[0].equalsIgnoreCase("give")) {
             if (!sender.hasPermission("fancyeggs.admin")) {
                 sender.sendMessage(lang.getColored("msg.no_permission"));
@@ -164,18 +192,14 @@ public class FancyEggs extends JavaPlugin implements Listener {
             boolean isCharged = args.length > 3 && args[3].equalsIgnoreCase("charged");
             playerEggs.computeIfAbsent(target.getUniqueId(), k -> new ArrayList<>()).add(new Egg(type, 1, isCharged));
 
-            String chargedSuffix = isCharged ? lang.getColored("msg.charged_suffix") : "";
+            String suffix = isCharged ? lang.getColored("msg.charged_suffix") : "";
             sender.sendMessage(lang.color(lang.get("msg.give_sender")
-                    .replace("%player%", target.getName())
-                    .replace("%egg%", type.name)
-                    .replace("%charged%", chargedSuffix)));
+                    .replace("%player%", target.getName()).replace("%egg%", type.name).replace("%charged%", suffix)));
             target.sendMessage(lang.color(lang.get("msg.give_target")
-                    .replace("%egg%", type.name)
-                    .replace("%charged%", chargedSuffix)));
+                    .replace("%egg%", type.name).replace("%charged%", suffix)));
             return true;
         }
 
-        // /fancyeggs list
         if (args.length > 0 && args[0].equalsIgnoreCase("list")) {
             sender.sendMessage(lang.getColored("list.header"));
             for (EggType type : eggTypes) {
@@ -188,7 +212,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
             return true;
         }
 
-        // Standard -> Menü
         if (sender instanceof Player) {
             openEggsMenu((Player) sender);
         } else {
@@ -197,32 +220,64 @@ public class FancyEggs extends JavaPlugin implements Listener {
         return true;
     }
 
+    // ============================
+    // HAUPT MENÜ
+    // ============================
     private void openEggsMenu(Player p) {
         Inventory inv = Bukkit.createInventory(null, 54, lang.getColored("menu.title"));
 
-        ItemStack lagerItem = new ItemStack(Material.CHEST);
-        ItemMeta lagerMeta = lagerItem.getItemMeta();
-        lagerMeta.setDisplayName(lang.getColored("storage.name"));
-        lagerMeta.setLore(Arrays.asList(
-            lang.getColored("storage.desc"),
-            "",
-            lang.getColored("storage.info"),
-            lang.getColored("storage.click"),
-            "",
-            lang.getColored("storage.count") + (playerEggs.getOrDefault(p.getUniqueId(), new ArrayList<>()).size())
-        ));
-        lagerItem.setItemMeta(lagerMeta);
-        inv.setItem(49, lagerItem);
+        // ---- Rahmen mit hellgrauen Scheiben ----
+        ItemStack border = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
+        ItemMeta borderMeta = border.getItemMeta();
+        borderMeta.setDisplayName(" ");
+        border.setItemMeta(borderMeta);
+        for (int slot : BORDER_SLOTS) inv.setItem(slot, border);
 
+        // ---- Eggs anzeigen ----
         List<Egg> eggs = playerEggs.get(p.getUniqueId());
         if (eggs != null) {
-            int slot = 10;
+            int i = 0;
             for (Egg egg : eggs) {
-                if (slot > 43) break;
-                inv.setItem(slot, createEggItem(egg));
-                slot++;
+                if (i >= EGG_SLOTS.length) break;
+                inv.setItem(EGG_SLOTS[i], createEggItem(egg));
+                i++;
             }
         }
+
+        // ---- Auto-Collect Toggle ----
+        boolean auto = autoCollect.getOrDefault(p.getUniqueId(), true);
+        ItemStack toggle = new ItemStack(auto ? Material.LIME_STAINED_GLASS_PANE : Material.RED_STAINED_GLASS_PANE);
+        ItemMeta toggleMeta = toggle.getItemMeta();
+        toggleMeta.setDisplayName(lang.getColored(auto ? "autocollect.on_name" : "autocollect.off_name"));
+        toggleMeta.setLore(Arrays.asList(
+            lang.getColored("autocollect.desc"),
+            "",
+            lang.getColored("autocollect.info"),
+            lang.getColored(auto ? "autocollect.on_text" : "autocollect.off_text"),
+            "",
+            lang.getColored("autocollect.click")
+        ));
+        toggle.setItemMeta(toggleMeta);
+        inv.setItem(SLOT_AUTOCOLLECT, toggle);
+
+        // ---- Info Chest (nur wenn Auto-Collect aus) ----
+        if (!auto) {
+            double pending = pendingMoney.getOrDefault(p.getUniqueId(), 0.0);
+            ItemStack chest = new ItemStack(Material.CHEST);
+            ItemMeta chestMeta = chest.getItemMeta();
+            chestMeta.setDisplayName(lang.getColored("pending.name"));
+            chestMeta.setLore(Arrays.asList(
+                lang.getColored("pending.desc"),
+                "",
+                lang.getColored("pending.info"),
+                lang.getColored("pending.amount") + lang.color(Lang.GOLD + Lang.BOLD + "$" + df.format(pending)),
+                "",
+                lang.getColored("pending.click")
+            ));
+            chest.setItemMeta(chestMeta);
+            inv.setItem(SLOT_INFO, chest);
+        }
+
         p.openInventory(inv);
     }
 
@@ -248,21 +303,71 @@ public class FancyEggs extends JavaPlugin implements Listener {
         return item;
     }
 
+    // ============================
+    // LAGER MENÜ
+    // ============================
+    private void openStorageMenu(Player p) {
+        Inventory inv = Bukkit.createInventory(null, 54, lang.getColored("menu.storage.title"));
+
+        ItemStack border = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
+        ItemMeta borderMeta = border.getItemMeta();
+        borderMeta.setDisplayName(" ");
+        border.setItemMeta(borderMeta);
+        for (int slot : BORDER_SLOTS) inv.setItem(slot, border);
+
+        List<Egg> stored = playerStorage.get(p.getUniqueId());
+        if (stored != null) {
+            int i = 0;
+            for (Egg egg : stored) {
+                if (i >= EGG_SLOTS.length) break;
+                inv.setItem(EGG_SLOTS[i], createEggItem(egg));
+                i++;
+            }
+        }
+
+        p.openInventory(inv);
+    }
+
     @EventHandler
     public void onInventoryClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player)) return;
         Player p = (Player) e.getWhoClicked();
 
-        if (e.getView().getTitle().equals(lang.getColored("menu.title"))) {
-            e.setCancelled(true);
-            if (e.getCurrentItem() == null) return;
+        String title = e.getView().getTitle();
 
-            if (e.getSlot() == 49 && e.getCurrentItem().getType() == Material.CHEST) {
+        // =========== HAUPT MENÜ ===========
+        if (title.equals(lang.getColored("menu.title"))) {
+            e.setCancelled(true);
+            if (e.getCurrentItem() == null || e.getCurrentItem().getType() == Material.AIR) return;
+
+            // ---- Auto-Collect Toggle ----
+            if (e.getSlot() == SLOT_AUTOCOLLECT) {
+                boolean newState = !autoCollect.getOrDefault(p.getUniqueId(), true);
+                autoCollect.put(p.getUniqueId(), newState);
+                p.playSound(p.getLocation(), Sound.BLOCK_LEVER_CLICK, 1f, newState ? 1.2f : 0.8f);
                 p.closeInventory();
-                openInventoryMenu(p);
+                Bukkit.getScheduler().runTaskLater(this, () -> openEggsMenu(p), 1L);
                 return;
             }
 
+            // ---- Info Chest (Geld einsammeln) ----
+            if (e.getSlot() == SLOT_INFO && e.getCurrentItem().getType() == Material.CHEST) {
+                double pending = pendingMoney.getOrDefault(p.getUniqueId(), 0.0);
+                if (pending > 0) {
+                    econ.depositPlayer(p, pending);
+                    pendingMoney.put(p.getUniqueId(), 0.0);
+                    p.sendMessage(lang.color(lang.get("pending.collected").replace("%amount%", df.format(pending))));
+                    p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.2f);
+                } else {
+                    p.sendMessage(lang.getColored("pending.empty"));
+                    p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                }
+                p.closeInventory();
+                Bukkit.getScheduler().runTaskLater(this, () -> openEggsMenu(p), 1L);
+                return;
+            }
+
+            // ---- Egg im Menü angeklickt ----
             if (e.getCurrentItem().getType() != Material.AIR) {
                 List<Egg> eggs = playerEggs.get(p.getUniqueId());
                 if (eggs == null || eggs.isEmpty()) return;
@@ -270,14 +375,12 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 String displayName = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName());
                 Egg targetEgg = null;
                 for (Egg egg : eggs) {
-                    if (displayName.contains(egg.type.name)) {
-                        targetEgg = egg;
-                        break;
-                    }
+                    if (displayName.contains(egg.type.name)) { targetEgg = egg; break; }
                 }
                 if (targetEgg == null) return;
 
                 if (e.isShiftClick()) {
+                    // UPGRADE
                     double cost = targetEgg.getUpgradeCost();
                     if (econ.getBalance(p) >= cost) {
                         econ.withdrawPlayer(p, cost);
@@ -289,45 +392,47 @@ public class FancyEggs extends JavaPlugin implements Listener {
                         p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     }
                     p.closeInventory();
-                    openEggsMenu(p);
+                    Bukkit.getScheduler().runTaskLater(this, () -> openEggsMenu(p), 1L);
                 } else if (e.isLeftClick()) {
+                    // ABLEGEN -> ins Lager
                     eggs.remove(targetEgg);
+                    playerStorage.computeIfAbsent(p.getUniqueId(), k -> new ArrayList<>()).add(targetEgg);
                     p.sendMessage(lang.color(lang.get("msg.removed").replace("%egg%", targetEgg.type.name)));
                     p.playSound(p.getLocation(), Sound.BLOCK_ANVIL_BREAK, 1f, 1f);
                     p.closeInventory();
-                    openEggsMenu(p);
+                    Bukkit.getScheduler().runTaskLater(this, () -> openEggsMenu(p), 1L);
                 }
             }
         }
 
-        if (e.getView().getTitle().equals(lang.getColored("menu.storage.title"))) {
+        // =========== LAGER MENÜ ===========
+        else if (title.equals(lang.getColored("menu.storage.title"))) {
             e.setCancelled(true);
-            if (e.getCurrentItem() == null) return;
+            if (e.getCurrentItem() == null || e.getCurrentItem().getType() == Material.AIR) return;
+            if (e.getCurrentItem().getType() == Material.LIGHT_GRAY_STAINED_GLASS_PANE) return;
 
-            if (e.getCurrentItem().getType() != Material.AIR
-                    && e.getCurrentItem().getType() != Material.GRAY_STAINED_GLASS_PANE) {
-                p.sendMessage(lang.getColored("msg.already_storage"));
+            // Rechtsklick -> zurück ins Hauptmenü (Egg wieder aktivieren)
+            if (e.isRightClick() || e.isShiftClick()) {
+                List<Egg> stored = playerStorage.get(p.getUniqueId());
+                if (stored == null || stored.isEmpty()) return;
+
+                String displayName = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName());
+                Egg target = null;
+                for (Egg egg : stored) {
+                    if (displayName.contains(egg.type.name)) { target = egg; break; }
+                }
+                if (target == null) return;
+
+                stored.remove(target);
+                playerEggs.computeIfAbsent(p.getUniqueId(), k -> new ArrayList<>()).add(target);
+                p.sendMessage(lang.color(lang.get("storage.equipped").replace("%egg%", target.type.name)));
+                p.playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_GENERIC, 1f, 1.2f);
+                p.closeInventory();
+                Bukkit.getScheduler().runTaskLater(this, () -> openStorageMenu(p), 1L);
+            } else {
+                p.sendMessage(lang.getColored("storage.hint"));
             }
         }
-    }
-
-    private void openInventoryMenu(Player p) {
-        Inventory inv = Bukkit.createInventory(null, 54, lang.getColored("menu.storage.title"));
-        List<Egg> eggs = playerEggs.get(p.getUniqueId());
-        if (eggs != null) {
-            int slot = 0;
-            for (Egg egg : eggs) {
-                if (slot > 44) break;
-                inv.setItem(slot, createEggItem(egg));
-                slot++;
-            }
-        }
-        ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
-        ItemMeta fillerMeta = filler.getItemMeta();
-        fillerMeta.setDisplayName(" ");
-        filler.setItemMeta(fillerMeta);
-        for (int i = 45; i < 54; i++) inv.setItem(i, filler);
-        p.openInventory(inv);
     }
 
     // ============================
