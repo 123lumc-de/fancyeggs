@@ -30,7 +30,7 @@ public class Lang {
         boolean en = lang.equals("en");
         switch (key) {
             // ---- Menü Titel ----
-            case "menu.title":          return GOLD + BOLD + (en ? "Eggs | Menu"    : "Eggs | Menü");
+            case "menu.title":          return GOLD + BOLD + (en ? "Eggs | Menu" : "Eggs | Menü");
 
             // ---- Egg Item ----
             case "egg.desc":            return GRAY + (en ? "Description" : "Beschreibung");
@@ -44,7 +44,7 @@ public class Lang {
 
             // ---- Chat Messages ----
             case "msg.no_permission":   return RED + (en ? "You don't have permission for this." : "Dazu hast du keine Rechte.");
-            case "msg.give_usage":      return RED + (en ? "Usage: /fancyeggs give <player> <egg> [charged]" : "Nutzung: /fancyeggs give <Spieler> <EggName> [charged]");
+            case "msg.give_usage":      return RED + (en ? "Usage: /fancyeggs give <player> <eggKey> [charged]" : "Nutzung: /fancyeggs give <Spieler> <EggKey> [charged]");
             case "msg.available":       return GOLD + BOLD + (en ? "Available: " : "Verfügbar: ") + RESET + WHITE;
             case "msg.player_not_found":return RED + (en ? "Player not found." : "Spieler nicht gefunden.");
             case "msg.egg_not_found":   return RED + (en ? "Egg type not found." : "Egg-Typ nicht gefunden.");
