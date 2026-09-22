@@ -1,8 +1,8 @@
 name: FancyEggs
-version: 1.4
+version: 1.5
 main: de.lmcstudio.fancyeggs.FancyEggs
 api-version: '26.1'
-softdepend: [Vault]
+softdepend: [Vault, PlaceholderAPI]
 authors: [LMCStudio]
 commands:
   fancyeggs:
