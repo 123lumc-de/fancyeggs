@@ -5,6 +5,8 @@ import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class FancyEggsExpansion extends PlaceholderExpansion {
 
@@ -31,26 +33,64 @@ public class FancyEggsExpansion extends PlaceholderExpansion {
 
     @Override
     public String onRequest(OfflinePlayer player, @NotNull String params) {
-        if (player == null) return "";
+        TopManager top = plugin.getTopManager();
 
-        // %fancyeggs_total_income% -> z.B. "1.50M"
-        if (params.equalsIgnoreCase("total_income")) {
-            return NumberFormatter.format(getTotalIncome(player));
+        // === Eigene Werte ===
+        if (player != null) {
+            if (params.equalsIgnoreCase("total_income")) {
+                return NumberFormatter.format(getTotalIncome(player));
+            }
+            if (params.equalsIgnoreCase("total_income_raw")) {
+                return String.valueOf(getTotalIncome(player));
+            }
+            if (params.equalsIgnoreCase("egg_count")) {
+                List<FancyEggs.Egg> eggs = plugin.getPlayerEggs().get(player.getUniqueId());
+                return eggs == null ? "0" : String.valueOf(eggs.size());
+            }
+            if (params.equalsIgnoreCase("rank")) {
+                List<Map.Entry<UUID, Double>> sorted = top.getSorted();
+                for (int i = 0; i < sorted.size(); i++) {
+                    if (sorted.get(i).getKey().equals(player.getUniqueId())) {
+                        return String.valueOf(i + 1);
+                    }
+                }
+                return "-";
+            }
         }
 
-        // %fancyeggs_total_income_raw% -> z.B. "1500000.0"
-        if (params.equalsIgnoreCase("total_income_raw")) {
-            return String.valueOf(getTotalIncome(player));
+        // === Top-Liste: %fancyeggs_top_<rank>_<name|value>% ===
+        if (params.toLowerCase().startsWith("top_")) {
+            String[] parts = params.split("_");
+            if (parts.length == 3) {
+                try {
+                    int rank = Integer.parseInt(parts[1]);
+                    String type = parts[2].toLowerCase();
+
+                    List<Map.Entry<UUID, Double>> sorted = top.getSorted();
+                    if (rank < 1 || rank > sorted.size()) {
+                        return type.equals("name") ? "-" : "0.00";
+                    }
+
+                    Map.Entry<UUID, Double> entry = sorted.get(rank - 1);
+                    if (type.equals("name")) {
+                        return top.getNameByUUID(entry.getKey());
+                    } else if (type.equals("value")) {
+                        return NumberFormatter.format(entry.getValue());
+                    } else if (type.equals("value_raw")) {
+                        return String.valueOf(entry.getValue());
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
         }
 
-        // %fancyeggs_egg_count% -> z.B. "7"
-        if (params.equalsIgnoreCase("egg_count")) {
-            List<FancyEggs.Egg> eggs = plugin.getPlayerEggs().get(player.getUniqueId());
-            return eggs == null ? "0" : String.valueOf(eggs.size());
+        // === Gesamtzahl der Spieler in der Rangliste ===
+        if (params.equalsIgnoreCase("top_total")) {
+            return String.valueOf(top.size());
         }
 
-        // %fancyeggs_upgrade_cost_<key>% -> z.B. "%fancyeggs_upgrade_cost_Chicken_Egg%"
+        // === Upgrade-Kosten eines Eggs nach Key ===
         if (params.toLowerCase().startsWith("upgrade_cost_")) {
+            if (player == null) return "0.00";
             String key = params.substring("upgrade_cost_".length());
             List<FancyEggs.Egg> eggs = plugin.getPlayerEggs().get(player.getUniqueId());
             if (eggs != null) {
