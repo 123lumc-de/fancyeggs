@@ -2,16 +2,13 @@ package de.lmcstudio.fancyeggs;
 
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import java.text.DecimalFormat;
 import java.util.List;
 
 public class FancyEggsExpansion extends PlaceholderExpansion {
 
     private final FancyEggs plugin;
-    private final DecimalFormat df = new DecimalFormat("#,##0.00");
 
     public FancyEggsExpansion(FancyEggs plugin) {
         this.plugin = plugin;
@@ -36,17 +33,34 @@ public class FancyEggsExpansion extends PlaceholderExpansion {
     public String onRequest(OfflinePlayer player, @NotNull String params) {
         if (player == null) return "";
 
+        // %fancyeggs_total_income% -> z.B. "1.50M"
         if (params.equalsIgnoreCase("total_income")) {
+            return NumberFormatter.format(getTotalIncome(player));
+        }
+
+        // %fancyeggs_total_income_raw% -> z.B. "1500000.0"
+        if (params.equalsIgnoreCase("total_income_raw")) {
             return String.valueOf(getTotalIncome(player));
         }
 
-        if (params.equalsIgnoreCase("total_income_formatted")) {
-            return df.format(getTotalIncome(player));
-        }
-
+        // %fancyeggs_egg_count% -> z.B. "7"
         if (params.equalsIgnoreCase("egg_count")) {
             List<FancyEggs.Egg> eggs = plugin.getPlayerEggs().get(player.getUniqueId());
             return eggs == null ? "0" : String.valueOf(eggs.size());
+        }
+
+        // %fancyeggs_upgrade_cost_<key>% -> z.B. "%fancyeggs_upgrade_cost_Chicken_Egg%"
+        if (params.toLowerCase().startsWith("upgrade_cost_")) {
+            String key = params.substring("upgrade_cost_".length());
+            List<FancyEggs.Egg> eggs = plugin.getPlayerEggs().get(player.getUniqueId());
+            if (eggs != null) {
+                for (FancyEggs.Egg egg : eggs) {
+                    if (egg.type.key.equalsIgnoreCase(key)) {
+                        return NumberFormatter.format(egg.getUpgradeCost());
+                    }
+                }
+            }
+            return "0.00";
         }
 
         return null;
