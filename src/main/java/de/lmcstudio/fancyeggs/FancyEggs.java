@@ -28,6 +28,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
     private Economy econ;
     private Lang lang;
     private TopManager topManager;
+    private EggStorage eggStorage;
     private double chargedMultiplier = 1.25;
 
     private final Map<UUID, List<Egg>> playerEggs = new HashMap<>();
@@ -49,10 +50,14 @@ public class FancyEggs extends JavaPlugin implements Listener {
         saveDefaultConfig();
         reloadConfig();
 
-        // TopManager initialisieren
-        this.topManager = new TopManager(this);
+        // 1) Config zuerst laden (Egg-Typen sind wichtig für das EggStorage)
+        loadConfigValues();
 
-        // PlaceholderAPI-Expansion registrieren
+        // 2) Storage + TopManager initialisieren
+        this.topManager = new TopManager(this);
+        this.eggStorage = new EggStorage(this);
+
+        // 3) PlaceholderAPI-Expansion registrieren
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             try {
                 new FancyEggsExpansion(this).register();
@@ -69,7 +74,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 return;
             }
             getServer().getPluginManager().registerEvents(this, this);
-            loadConfigValues();
 
             // Einkommens-Timer (jede Sekunde)
             new BukkitRunnable() {
@@ -78,16 +82,12 @@ public class FancyEggs extends JavaPlugin implements Listener {
                     for (Player p : Bukkit.getOnlinePlayers()) {
                         List<Egg> eggs = playerEggs.get(p.getUniqueId());
                         if (eggs == null || eggs.isEmpty()) {
-                            // Auch wenn leer -> TopManager updaten (auf 0)
                             topManager.updatePlayer(p.getUniqueId(), p.getName(), 0.0);
                             continue;
                         }
                         double income = 0;
                         for (Egg e : eggs) income += e.getCurrentIncome();
-
-                        // TopManager updaten (auch offline Spieler werden dadurch erfasst)
                         topManager.updatePlayer(p.getUniqueId(), p.getName(), income);
-
                         if (income <= 0) continue;
                         if (autoCollect.getOrDefault(p.getUniqueId(), true)) econ.depositPlayer(p, income);
                         else pendingMoney.merge(p.getUniqueId(), income, Double::sum);
@@ -95,12 +95,13 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 }
             }.runTaskTimer(this, 20L, 20L);
 
-            // Auto-Save der tops.yml alle 5 Minuten (6000 Ticks)
+            // Auto-Save alle 5 Minuten (Tops + Eggs)
             new BukkitRunnable() {
                 @Override
                 public void run() {
                     topManager.save();
-                    getLogger().info("tops.yml automatisch gespeichert.");
+                    eggStorage.save();
+                    getLogger().info("Auto-Save: tops.yml & eggs.yml gespeichert.");
                 }
             }.runTaskTimer(this, 6000L, 6000L);
 
@@ -122,15 +123,14 @@ public class FancyEggs extends JavaPlugin implements Listener {
         }
     }
 
-    /** Wird von der PlaceholderAPI-Expansion genutzt */
-    public TopManager getTopManager() {
-        return topManager;
-    }
+    /** Wird vom EggStorage gebraucht */
+    public List<EggType> getEggTypes() { return eggTypes; }
 
-    /** Wird von der PlaceholderAPI-Expansion genutzt */
-    public Map<UUID, List<Egg>> getPlayerEggs() {
-        return playerEggs;
-    }
+    /** Wird vom TopManager gebraucht */
+    public Map<UUID, List<Egg>> getPlayerEggs() { return playerEggs; }
+
+    /** Wird von der PlaceholderAPI-Expansion gebraucht */
+    public TopManager getTopManager() { return topManager; }
 
     private void loadConfigValues() {
         this.lang = new Lang(getConfig());
@@ -164,12 +164,16 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        // Alles einsammeln und speichern
+        // Pending auszahlen
         for (Map.Entry<UUID, Double> e : pendingMoney.entrySet()) {
             Player p = Bukkit.getPlayer(e.getKey());
             if (p != null && econ != null) econ.depositPlayer(p, e.getValue());
         }
+        // Alles speichern
         if (topManager != null) topManager.save();
+        if (eggStorage != null) eggStorage.save();
+        getLogger().info("Alle Daten gespeichert.");
+
         playerEggs.clear();
         pendingMoney.clear();
         autoCollect.clear();
@@ -194,6 +198,15 @@ public class FancyEggs extends JavaPlugin implements Listener {
             return true;
         }
 
+        // /fancyeggs save  (manueller Save)
+        if (a.length > 0 && a[0].equalsIgnoreCase("save")) {
+            if (!s.hasPermission("fancyeggs.admin")) { s.sendMessage(lang.getColored("msg.no_permission")); return true; }
+            eggStorage.save();
+            topManager.save();
+            s.sendMessage(lang.color(Lang.GOLD+Lang.BOLD+"Alle Daten gespeichert."));
+            return true;
+        }
+
         // /fancyeggs give <Spieler> <EggKey> [charged]
         if (a.length > 0 && a[0].equalsIgnoreCase("give")) {
             if (!s.hasPermission("fancyeggs.admin")) { s.sendMessage(lang.getColored("msg.no_permission")); return true; }
@@ -211,6 +224,8 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
             boolean ch = a.length > 3 && a[3].equalsIgnoreCase("charged");
             playerEggs.computeIfAbsent(t.getUniqueId(), k -> new ArrayList<>()).add(new Egg(type, 1, ch));
+            eggStorage.save(); // sofort speichern!
+
             String sfx = ch ? lang.getColored("msg.charged_suffix") : "";
             s.sendMessage(lang.color(lang.get("msg.give_sender")
                     .replace("%player%", t.getName()).replace("%egg%", type.name).replace("%charged%", sfx)));
@@ -352,6 +367,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
         if (target == null) return;
 
         if (e.isShiftClick()) {
+            // VERKAUFEN
             double sp = target.getSellPrice();
             econ.depositPlayer(p, sp);
             eggs.remove(target);
@@ -360,6 +376,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
                     .replace("%price%", NumberFormatter.format(sp))));
             p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 0.8f);
         } else if (e.isLeftClick()) {
+            // UPGRADEN
             double cost = target.getUpgradeCost();
             if (econ.getBalance(p) >= cost) {
                 econ.withdrawPlayer(p, cost);
@@ -371,6 +388,9 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             }
         }
+        // SOFORT speichern (wichtig für Upgrade/Verkauf)
+        eggStorage.save();
+
         p.closeInventory();
         Bukkit.getScheduler().runTaskLater(this, () -> openEggsMenu(p), 1L);
     }
