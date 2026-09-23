@@ -20,7 +20,6 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.text.DecimalFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,7 +28,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
     private Economy econ;
     private Lang lang;
     private double chargedMultiplier = 1.25;
-    private final DecimalFormat df = new DecimalFormat("#,##0.00");
 
     private final Map<UUID, List<Egg>> playerEggs = new HashMap<>();
     private final Map<UUID, Boolean> autoCollect = new HashMap<>();
@@ -50,7 +48,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
         saveDefaultConfig();
         reloadConfig();
 
-        // PlaceholderAPI-Expansion registrieren (nur wenn installiert)
+        // PlaceholderAPI-Expansion registrieren
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             try {
                 new FancyEggsExpansion(this).register();
@@ -158,6 +156,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
+
         // /fancyeggs reload
         if (a.length > 0 && a[0].equalsIgnoreCase("reload")) {
             if (!s.hasPermission("fancyeggs.admin")) { s.sendMessage(lang.getColored("msg.no_permission")); return true; }
@@ -196,8 +195,8 @@ public class FancyEggs extends JavaPlugin implements Listener {
             s.sendMessage(lang.getColored("list.header"));
             for (EggType t : eggTypes) {
                 s.sendMessage(lang.getColored("list.name") + lang.color(Lang.GOLD+Lang.BOLD+t.name+" ("+t.key+")"));
-                s.sendMessage(lang.getColored("list.base_income") + lang.color(Lang.GOLD+Lang.BOLD+df.format(t.baseIncome)) + lang.color(Lang.WHITE) + "/s");
-                s.sendMessage(lang.getColored("list.upgrade_cost") + lang.color(Lang.GOLD+Lang.BOLD+df.format(t.baseUpgradeCost)));
+                s.sendMessage(lang.getColored("list.base_income") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(t.baseIncome)) + lang.color(Lang.WHITE) + "/s");
+                s.sendMessage(lang.getColored("list.upgrade_cost") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(t.baseUpgradeCost)));
                 s.sendMessage(lang.getColored("list.multiplier") + lang.color(Lang.GOLD+Lang.BOLD+t.upgradeMultiplier));
             }
             s.sendMessage(lang.getColored("list.footer"));
@@ -246,7 +245,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
             cm.setLore(Arrays.asList(
                     lang.getColored("pending.desc"), "",
                     lang.getColored("pending.info"),
-                    lang.getColored("pending.amount") + lang.color(Lang.GOLD+Lang.BOLD+"$"+df.format(pending)),
+                    lang.getColored("pending.amount") + lang.color(Lang.GOLD+Lang.BOLD+"$"+NumberFormatter.format(pending)),
                     "", lang.getColored("pending.click")));
             ch.setItemMeta(cm);
             inv.setItem(SLOT_INFO, ch);
@@ -265,9 +264,9 @@ public class FancyEggs extends JavaPlugin implements Listener {
         lore.add("");
         lore.add(lang.getColored("egg.level") + lang.color(Lang.GOLD+Lang.BOLD+egg.level+" ★"));
         lore.add("");
-        lore.add(lang.getColored("egg.income") + lang.color(Lang.GOLD+Lang.BOLD+df.format(egg.getCurrentIncome())));
-        lore.add(lang.getColored("egg.upgrade_price") + lang.color(Lang.GOLD+Lang.BOLD+df.format(egg.getUpgradeCost())));
-        lore.add(lang.getColored("egg.sell_price") + lang.color(Lang.GOLD+Lang.BOLD+df.format(egg.getSellPrice())));
+        lore.add(lang.getColored("egg.income") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(egg.getCurrentIncome())));
+        lore.add(lang.getColored("egg.upgrade_price") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(egg.getUpgradeCost())));
+        lore.add(lang.getColored("egg.sell_price") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(egg.getSellPrice())));
         lore.add("");
         lore.add(lang.getColored("egg.left_upgrade"));
         lore.add(lang.getColored("egg.shift_sell"));
@@ -300,7 +299,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
             if (pending > 0) {
                 econ.depositPlayer(p, pending);
                 pendingMoney.put(p.getUniqueId(), 0.0);
-                p.sendMessage(lang.color(lang.get("pending.collected").replace("%amount%", df.format(pending))));
+                p.sendMessage(lang.color(lang.get("pending.collected").replace("%amount%", NumberFormatter.format(pending))));
                 p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.2f);
             } else {
                 p.sendMessage(lang.getColored("pending.empty"));
@@ -334,7 +333,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
             eggs.remove(target);
             p.sendMessage(lang.color(lang.get("msg.sold")
                     .replace("%egg%", target.type.name)
-                    .replace("%price%", df.format(sp))));
+                    .replace("%price%", NumberFormatter.format(sp))));
             p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 0.8f);
         } else if (e.isLeftClick()) {
             // UPGRADEN
@@ -345,7 +344,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
                 p.sendMessage(lang.getColored("msg.upgraded") + target.level);
             } else {
-                p.sendMessage(lang.getColored("msg.not_enough") + df.format(cost));
+                p.sendMessage(lang.getColored("msg.not_enough") + NumberFormatter.format(cost));
                 p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             }
         }
