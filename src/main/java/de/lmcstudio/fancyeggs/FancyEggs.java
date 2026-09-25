@@ -491,4 +491,203 @@ public class FancyEggs extends JavaPlugin implements Listener {
         // ========== LAGER-MENÜ ==========
         if (title.equals(lang.getColored("storage.menu.title"))) {
             e.setCancelled(true);
-            if (e.getCurrentItem() == null || e.getCurrentItem().getType()
+            if (e.getCurrentItem() == null || e.getCurrentItem().getType() == Material.AIR) return;
+
+            // Zurück zum Menü (Glasscheibe oben rechts)
+            if (e.getSlot() == SLOT_STORAGE_BACK) {
+                p.closeInventory();
+                Bukkit.getScheduler().runTaskLater(this, () -> openEggsMenu(p), 1L);
+                return;
+            }
+
+            // Prev
+            if (e.getSlot() == SLOT_STORAGE_PREV && e.getCurrentItem().getType() == Material.ARROW) {
+                int page = storagePage.getOrDefault(p.getUniqueId(), 0);
+                if (page > 0) {
+                    storagePage.put(p.getUniqueId(), page - 1);
+                    p.playSound(p.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1f, 1f);
+                }
+                p.closeInventory();
+                Bukkit.getScheduler().runTaskLater(this, () -> openStorageMenu(p), 1L);
+                return;
+            }
+
+            // Next
+            if (e.getSlot() == SLOT_STORAGE_NEXT && e.getCurrentItem().getType() == Material.ARROW) {
+                int page = storagePage.getOrDefault(p.getUniqueId(), 0);
+                storagePage.put(p.getUniqueId(), page + 1);
+                p.playSound(p.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1f, 1f);
+                p.closeInventory();
+                Bukkit.getScheduler().runTaskLater(this, () -> openStorageMenu(p), 1L);
+                return;
+            }
+
+            Material t = e.getCurrentItem().getType();
+            if (t == Material.LIGHT_GRAY_STAINED_GLASS_PANE || t == Material.ARROW || t == Material.PAPER) return;
+
+            List<Egg> stored = playerStorage.get(p.getUniqueId());
+            if (stored == null || stored.isEmpty()) return;
+
+            String dn = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName());
+            Egg target = null;
+            for (Egg egg : stored) {
+                if (dn.contains(egg.type.name)) { target = egg; break; }
+            }
+            if (target == null) return;
+
+            if (e.isShiftClick()) {
+                // Alle Eggs dieses Typs verkaufen
+                double total = 0;
+                Iterator<Egg> it = stored.iterator();
+                while (it.hasNext()) {
+                    Egg cur = it.next();
+                    if (cur.type.key.equalsIgnoreCase(target.type.key)) {
+                        total += cur.getSellPrice();
+                        it.remove();
+                    }
+                }
+                econ.depositPlayer(p, total);
+                p.sendMessage(lang.color(lang.get("msg.sold")
+                        .replace("%egg%", target.type.name)
+                        .replace("%price%", NumberFormatter.format(total))));
+                p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 0.8f);
+            } else if (e.isLeftClick()) {
+                // Einzelnen verkaufen
+                double sp = target.getSellPrice();
+                econ.depositPlayer(p, sp);
+                stored.remove(target);
+                p.sendMessage(lang.color(lang.get("msg.sold")
+                        .replace("%egg%", target.type.name)
+                        .replace("%price%", NumberFormatter.format(sp))));
+                p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 0.8f);
+            } else if (e.isRightClick()) {
+                // Ausrüsten
+                int max = getMaxSlots(p);
+                int active = playerEggs.getOrDefault(p.getUniqueId(), new ArrayList<>()).size();
+                if (active >= max) {
+                    p.sendMessage(lang.getColored("storage.full_active"));
+                    p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                    return;
+                }
+                stored.remove(target);
+                playerEggs.computeIfAbsent(p.getUniqueId(), k -> new ArrayList<>()).add(target);
+                p.sendMessage(lang.color(lang.get("storage.moved_to_active").replace("%egg%", target.type.name)));
+                p.playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_GENERIC, 1f, 1.2f);
+            }
+
+            eggStorage.save();
+            p.closeInventory();
+            Bukkit.getScheduler().runTaskLater(this, () -> openStorageMenu(p), 1L);
+        }
+    }
+
+    // ==================================================
+    //   LAGER mit Seiten
+    // ==================================================
+    private static final int STORAGE_ITEMS_PER_PAGE = 28;
+
+    private void openStorageMenu(Player p) {
+        Inventory inv = Bukkit.createInventory(null, 54, lang.getColored("storage.menu.title"));
+
+        // Rahmen
+        ItemStack border = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
+        ItemMeta bm = border.getItemMeta(); bm.setDisplayName(" "); border.setItemMeta(bm);
+        for (int slot : BORDER_SLOTS) inv.setItem(slot, border);
+
+        List<Egg> stored = playerStorage.getOrDefault(p.getUniqueId(), new ArrayList<>());
+        int page = storagePage.getOrDefault(p.getUniqueId(), 0);
+        int totalPages = Math.max(1, (int) Math.ceil(stored.size() / (double) STORAGE_ITEMS_PER_PAGE));
+        if (page >= totalPages) page = totalPages - 1;
+        if (page < 0) page = 0;
+        storagePage.put(p.getUniqueId(), page);
+
+        int start = page * STORAGE_ITEMS_PER_PAGE;
+        int end = Math.min(start + STORAGE_ITEMS_PER_PAGE, stored.size());
+
+        for (int i = start; i < end; i++) {
+            inv.setItem(STORAGE_CONTENT_SLOTS[i - start], createStorageEggItem(stored.get(i)));
+        }
+
+        // Prev
+        if (page > 0) {
+            ItemStack prev = new ItemStack(Material.ARROW);
+            ItemMeta pm = prev.getItemMeta();
+            pm.setDisplayName(lang.getColored("storage.page.prev"));
+            prev.setItemMeta(pm);
+            inv.setItem(SLOT_STORAGE_PREV, prev);
+        }
+
+        // Next
+        if (page < totalPages - 1) {
+            ItemStack next = new ItemStack(Material.ARROW);
+            ItemMeta nm = next.getItemMeta();
+            nm.setDisplayName(lang.getColored("storage.page.next"));
+            next.setItemMeta(nm);
+            inv.setItem(SLOT_STORAGE_NEXT, next);
+        }
+
+        // Info (Seite X/Y)
+        ItemStack info = new ItemStack(Material.PAPER);
+        ItemMeta im = info.getItemMeta();
+        im.setDisplayName(lang.color(lang.get("storage.page.info")
+                .replace("%page%", String.valueOf(page + 1))
+                .replace("%max%", String.valueOf(totalPages))));
+        info.setItemMeta(im);
+        inv.setItem(49, info);
+
+        // Zurück zum Menü (Glasscheibe oben rechts)
+        ItemStack back = new ItemStack(Material.ORANGE_STAINED_GLASS_PANE);
+        ItemMeta bkm = back.getItemMeta();
+        bkm.setDisplayName(lang.getColored("storage.back.name"));
+        bkm.setLore(Collections.singletonList(lang.getColored("storage.back.lore")));
+        back.setItemMeta(bkm);
+        inv.setItem(SLOT_STORAGE_BACK, back);
+
+        p.openInventory(inv);
+    }
+
+    // ============================
+    // Egg-Klassen
+    // ============================
+    public class Egg {
+        public EggType type;
+        public int level;
+        public boolean isCharged;
+
+        public Egg(EggType type, int level, boolean isCharged) {
+            this.type = type;
+            this.level = level;
+            this.isCharged = isCharged;
+        }
+
+        public double getCurrentIncome() {
+            double base = type.baseIncome * Math.pow(type.upgradeMultiplier, level - 1);
+            return isCharged ? base * chargedMultiplier : base;
+        }
+
+        public double getUpgradeCost() {
+            return type.baseUpgradeCost * Math.pow(type.upgradeMultiplier, level - 1);
+        }
+
+        public double getSellPrice() {
+            return getUpgradeCost() * type.sellMultiplier;
+        }
+    }
+
+    public static class EggType {
+        public String key, name;
+        public double baseIncome, baseUpgradeCost, upgradeMultiplier, sellMultiplier;
+        public Material icon;
+
+        public EggType(String key, String name, double baseIncome, double baseUpgradeCost,
+                       double upgradeMultiplier, double sellMultiplier, Material icon) {
+            this.key = key;
+            this.name = name;
+            this.baseIncome = baseIncome;
+            this.baseUpgradeCost = baseUpgradeCost;
+            this.upgradeMultiplier = upgradeMultiplier;
+            this.sellMultiplier = sellMultiplier;
+            this.icon = icon;
+        }
+    }
+}
