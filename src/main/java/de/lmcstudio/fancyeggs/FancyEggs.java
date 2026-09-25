@@ -49,12 +49,19 @@ public class FancyEggs extends JavaPlugin implements Listener {
     private static final int SLOT_PENDING = 50;
     private static final int SLOT_STORAGE_PREV = 48;
     private static final int SLOT_STORAGE_NEXT = 50;
+    private static final int SLOT_STORAGE_BACK = 53;
 
-    // Mögliche Slots für aktive Eggs (3 Reihen = 27)
     private static final int[] ALL_EGG_SLOTS = {
         10,11,12,13,14,15,16,
         19,20,21,22,23,24,25,
         28,29,30,31,32,33,34
+    };
+
+    private static final int[] STORAGE_CONTENT_SLOTS = {
+        10,11,12,13,14,15,16,
+        19,20,21,22,23,24,25,
+        28,29,30,31,32,33,34,
+        37,38,39,40,41,42,43
     };
 
     @Override
@@ -189,19 +196,13 @@ public class FancyEggs extends JavaPlugin implements Listener {
     // ==================================================
     //   PERMISSION-SLOTS
     // ==================================================
-
-    /** Ermittelt das max. Slot-Limit für einen Spieler basierend auf Permissions. */
     public int getMaxSlots(Player p) {
-        // Prüfe von 27 abwärts bis 1
         for (int i = 27; i >= 1; i--) {
-            if (p.hasPermission("fancyeggs.slots." + i)) {
-                return i;
-            }
+            if (p.hasPermission("fancyeggs.slots." + i)) return i;
         }
         return defaultSlots;
     }
 
-    /** Prüft, ob der Spieler zu viele aktive Eggs hat und verschiebt überzählige ins Lager. */
     private void checkSlotLimit(Player p) {
         List<Egg> active = playerEggs.get(p.getUniqueId());
         if (active == null || active.isEmpty()) return;
@@ -209,18 +210,14 @@ public class FancyEggs extends JavaPlugin implements Listener {
         int max = getMaxSlots(p);
         if (active.size() <= max) return;
 
-        // Überzählige (die letzten in der Liste) ins Lager verschieben
         List<Egg> storage = playerStorage.computeIfAbsent(p.getUniqueId(), k -> new ArrayList<>());
         int toMove = active.size() - max;
         int moved = 0;
-
-        // Wir entfernen von hinten, damit die "ältesten" aktiv bleiben
         for (int i = 0; i < toMove; i++) {
             Egg removed = active.remove(active.size() - 1);
             storage.add(removed);
             moved++;
         }
-
         if (moved > 0) {
             p.sendMessage(lang.color(lang.get("msg.slots_moved").replace("%amount%", String.valueOf(moved))));
             eggStorage.save();
@@ -240,14 +237,14 @@ public class FancyEggs extends JavaPlugin implements Listener {
         if (a.length > 0 && a[0].equalsIgnoreCase("reload")) {
             if (!s.hasPermission("fancyeggs.admin")) { s.sendMessage(lang.getColored("msg.no_permission")); return true; }
             reloadConfig(); loadConfigValues();
-            s.sendMessage(lang.color(Lang.GOLD+Lang.BOLD+"Reloaded. "+eggTypes.size()+" Eggs aktiv."));
+            s.sendMessage(lang.color(Lang.ORANGE+Lang.BOLD+"Reloaded. "+eggTypes.size()+" Eggs aktiv."));
             return true;
         }
 
         if (a.length > 0 && a[0].equalsIgnoreCase("save")) {
             if (!s.hasPermission("fancyeggs.admin")) { s.sendMessage(lang.getColored("msg.no_permission")); return true; }
             eggStorage.save(); topManager.save();
-            s.sendMessage(lang.color(Lang.GOLD+Lang.BOLD+"Gespeichert."));
+            s.sendMessage(lang.color(Lang.ORANGE+Lang.BOLD+"Gespeichert."));
             return true;
         }
 
@@ -284,10 +281,10 @@ public class FancyEggs extends JavaPlugin implements Listener {
         if (a.length > 0 && a[0].equalsIgnoreCase("list")) {
             s.sendMessage(lang.getColored("list.header"));
             for (EggType t : eggTypes) {
-                s.sendMessage(lang.getColored("list.name") + lang.color(Lang.GOLD+Lang.BOLD+t.name+" ("+t.key+")"));
-                s.sendMessage(lang.getColored("list.base_income") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(t.baseIncome)) + lang.color(Lang.WHITE) + "/s");
-                s.sendMessage(lang.getColored("list.upgrade_cost") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(t.baseUpgradeCost)));
-                s.sendMessage(lang.getColored("list.multiplier") + lang.color(Lang.GOLD+Lang.BOLD+t.upgradeMultiplier));
+                s.sendMessage(lang.getColored("list.name") + lang.color(Lang.ORANGE+Lang.BOLD+t.name+" ("+t.key+")"));
+                s.sendMessage(lang.getColored("list.base_income") + lang.color(Lang.ORANGE+Lang.BOLD+NumberFormatter.format(t.baseIncome)) + lang.color(Lang.WHITE) + "/s");
+                s.sendMessage(lang.getColored("list.upgrade_cost") + lang.color(Lang.ORANGE+Lang.BOLD+NumberFormatter.format(t.baseUpgradeCost)));
+                s.sendMessage(lang.getColored("list.multiplier") + lang.color(Lang.ORANGE+Lang.BOLD+t.upgradeMultiplier));
             }
             s.sendMessage(lang.getColored("list.footer"));
             return true;
@@ -311,11 +308,10 @@ public class FancyEggs extends JavaPlugin implements Listener {
             int i = 0;
             for (Egg e : active) {
                 if (i >= slots.length) break;
-                inv.setItem(slots[i++], createEggItem(e));
+                inv.setItem(slots[i++], createActiveEggItem(e));
             }
         }
 
-        // Storage-Chest
         int storedCount = playerStorage.getOrDefault(p.getUniqueId(), new ArrayList<>()).size();
         ItemStack storageItem = new ItemStack(Material.CHEST);
         ItemMeta sm = storageItem.getItemMeta();
@@ -331,7 +327,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
         storageItem.setItemMeta(sm);
         inv.setItem(SLOT_INFO, storageItem);
 
-        // Auto-Collect Toggle
         boolean auto = autoCollect.getOrDefault(p.getUniqueId(), true);
         ItemStack toggle = new ItemStack(auto ? Material.LIME_STAINED_GLASS_PANE : Material.RED_STAINED_GLASS_PANE);
         ItemMeta tm = toggle.getItemMeta();
@@ -344,7 +339,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
         toggle.setItemMeta(tm);
         inv.setItem(SLOT_AUTOCOLLECT, toggle);
 
-        // Pending Chest
         if (!auto) {
             double pending = pendingMoney.getOrDefault(p.getUniqueId(), 0.0);
             ItemStack chest = new ItemStack(Material.CHEST);
@@ -353,7 +347,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
             cm.setLore(Arrays.asList(
                     lang.getColored("pending.desc"), "",
                     lang.getColored("pending.info"),
-                    lang.getColored("pending.amount") + lang.color(Lang.GOLD+Lang.BOLD+"$"+NumberFormatter.format(pending)),
+                    lang.getColored("pending.amount") + lang.color(Lang.ORANGE+Lang.BOLD+"$"+NumberFormatter.format(pending)),
                     "", lang.getColored("pending.click")));
             chest.setItemMeta(cm);
             inv.setItem(SLOT_PENDING, chest);
@@ -362,28 +356,49 @@ public class FancyEggs extends JavaPlugin implements Listener {
         p.openInventory(inv);
     }
 
-    private ItemStack createEggItem(Egg egg) {
+    /** Aktives Egg im Menü: nur Upgrade + Einlagern, KEIN Verkauf */
+    private ItemStack createActiveEggItem(Egg egg) {
         ItemStack item = new ItemStack(egg.type.icon);
         ItemMeta meta = item.getItemMeta();
         String charged = egg.isCharged ? lang.getColored("egg.charged_tag") : "";
-        meta.setDisplayName(charged + lang.color(Lang.GOLD+Lang.BOLD+egg.type.name));
+        meta.setDisplayName(charged + lang.color(Lang.ORANGE+Lang.BOLD+egg.type.name));
 
         List<String> lore = new ArrayList<>();
         lore.add(lang.getColored("egg.desc"));
         lore.add("");
-        lore.add(lang.getColored("egg.level") + lang.color(Lang.GOLD+Lang.BOLD+egg.level+" ★"));
+        lore.add(lang.getColored("egg.level") + lang.color(Lang.ORANGE+Lang.BOLD+egg.level+" ★"));
         lore.add("");
-        lore.add(lang.getColored("egg.income") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(egg.getCurrentIncome())));
-        lore.add(lang.getColored("egg.upgrade_price") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(egg.getUpgradeCost())));
-        lore.add(lang.getColored("egg.sell_price") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(egg.getSellPrice())));
+        lore.add(lang.getColored("egg.income") + lang.color(Lang.ORANGE+Lang.BOLD+NumberFormatter.format(egg.getCurrentIncome())));
+        lore.add(lang.getColored("egg.upgrade_price") + lang.color(Lang.ORANGE+Lang.BOLD+NumberFormatter.format(egg.getUpgradeCost())));
         lore.add("");
         lore.add(lang.color(lang.get("egg.charged_chance").replace("%chance%", String.valueOf(chargedChance))));
         int bonusPercent = (int) Math.round((chargedMultiplier - 1.0) * 100);
         lore.add(lang.color(lang.get("egg.charged_bonus").replace("%bonus%", String.valueOf(bonusPercent))));
         lore.add("");
         lore.add(lang.getColored("egg.left_upgrade"));
-        lore.add(lang.getColored("egg.shift_sell"));
         lore.add(lang.getColored("egg.right_remove"));
+        meta.setLore(lore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    /** Egg im Lager: Linksklick = Verkaufen, Rechtsklick = Ausrüsten */
+    private ItemStack createStorageEggItem(Egg egg) {
+        ItemStack item = new ItemStack(egg.type.icon);
+        ItemMeta meta = item.getItemMeta();
+        String charged = egg.isCharged ? lang.getColored("egg.charged_tag") : "";
+        meta.setDisplayName(charged + lang.color(Lang.ORANGE+Lang.BOLD+egg.type.name));
+
+        List<String> lore = new ArrayList<>();
+        lore.add(lang.getColored("egg.desc"));
+        lore.add("");
+        lore.add(lang.getColored("egg.level") + lang.color(Lang.ORANGE+Lang.BOLD+egg.level+" ★"));
+        lore.add("");
+        lore.add(lang.getColored("egg.income") + lang.color(Lang.ORANGE+Lang.BOLD+NumberFormatter.format(egg.getCurrentIncome())));
+        lore.add(lang.getColored("egg.sell_price") + lang.color(Lang.ORANGE+Lang.BOLD+NumberFormatter.format(egg.getSellPrice())));
+        lore.add("");
+        lore.add(lang.getColored("storage.egg.left_sell"));
+        lore.add(lang.getColored("storage.egg.right_equip"));
         meta.setLore(lore);
         item.setItemMeta(meta);
         return item;
@@ -400,7 +415,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
             e.setCancelled(true);
             if (e.getCurrentItem() == null || e.getCurrentItem().getType() == Material.AIR) return;
 
-            // Auto-Collect Toggle
             if (e.getSlot() == SLOT_AUTOCOLLECT) {
                 boolean ns = !autoCollect.getOrDefault(p.getUniqueId(), true);
                 autoCollect.put(p.getUniqueId(), ns);
@@ -410,7 +424,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 return;
             }
 
-            // Storage öffnen
             if (e.getSlot() == SLOT_INFO && e.getCurrentItem().getType() == Material.CHEST) {
                 p.closeInventory();
                 storagePage.put(p.getUniqueId(), 0);
@@ -418,7 +431,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 return;
             }
 
-            // Pending Chest
             if (!autoCollect.getOrDefault(p.getUniqueId(), true)
                     && e.getSlot() == SLOT_PENDING
                     && e.getCurrentItem().getType() == Material.CHEST) {
@@ -451,20 +463,14 @@ public class FancyEggs extends JavaPlugin implements Listener {
             }
             if (target == null) return;
 
-            if (e.isShiftClick()) {
-                double sp = target.getSellPrice();
-                econ.depositPlayer(p, sp);
-                eggs.remove(target);
-                p.sendMessage(lang.color(lang.get("msg.sold")
-                        .replace("%egg%", target.type.name)
-                        .replace("%price%", NumberFormatter.format(sp))));
-                p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 0.8f);
-            } else if (e.isRightClick()) {
+            if (e.isRightClick()) {
+                // Ins Lager verschieben
                 eggs.remove(target);
                 playerStorage.computeIfAbsent(p.getUniqueId(), k -> new ArrayList<>()).add(target);
                 p.sendMessage(lang.color(lang.get("storage.moved_to_storage").replace("%egg%", target.type.name)));
                 p.playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_GENERIC, 1f, 0.8f);
             } else if (e.isLeftClick()) {
+                // Upgraden
                 double cost = target.getUpgradeCost();
                 if (econ.getBalance(p) >= cost) {
                     econ.withdrawPlayer(p, cost);
@@ -485,166 +491,4 @@ public class FancyEggs extends JavaPlugin implements Listener {
         // ========== LAGER-MENÜ ==========
         if (title.equals(lang.getColored("storage.menu.title"))) {
             e.setCancelled(true);
-            if (e.getCurrentItem() == null || e.getCurrentItem().getType() == Material.AIR) return;
-
-            // Navigation
-            if (e.getSlot() == SLOT_STORAGE_PREV && e.getCurrentItem().getType() == Material.ARROW) {
-                int page = storagePage.getOrDefault(p.getUniqueId(), 0);
-                if (page > 0) {
-                    storagePage.put(p.getUniqueId(), page - 1);
-                    p.playSound(p.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1f, 1f);
-                }
-                p.closeInventory();
-                Bukkit.getScheduler().runTaskLater(this, () -> openStorageMenu(p), 1L);
-                return;
-            }
-            if (e.getSlot() == SLOT_STORAGE_NEXT && e.getCurrentItem().getType() == Material.ARROW) {
-                int page = storagePage.getOrDefault(p.getUniqueId(), 0);
-                storagePage.put(p.getUniqueId(), page + 1);
-                p.playSound(p.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1f, 1f);
-                p.closeInventory();
-                Bukkit.getScheduler().runTaskLater(this, () -> openStorageMenu(p), 1L);
-                return;
-            }
-
-            Material t = e.getCurrentItem().getType();
-            if (t == Material.LIGHT_GRAY_STAINED_GLASS_PANE || t == Material.ARROW) return;
-
-            List<Egg> stored = playerStorage.get(p.getUniqueId());
-            if (stored == null || stored.isEmpty()) return;
-
-            int max = getMaxSlots(p);
-            int active = playerEggs.getOrDefault(p.getUniqueId(), new ArrayList<>()).size();
-            if (active >= max) {
-                p.sendMessage(lang.getColored("storage.full_active"));
-                p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-                return;
-            }
-
-            String dn = ChatColor.stripColor(e.getCurrentItem().getItemMeta().getDisplayName());
-            Egg target = null;
-            for (Egg egg : stored) {
-                if (dn.contains(egg.type.name)) { target = egg; break; }
-            }
-            if (target == null) return;
-
-            stored.remove(target);
-            playerEggs.computeIfAbsent(p.getUniqueId(), k -> new ArrayList<>()).add(target);
-            p.sendMessage(lang.color(lang.get("storage.moved_to_active").replace("%egg%", target.type.name)));
-            p.playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_GENERIC, 1f, 1.2f);
-
-            eggStorage.save();
-            p.closeInventory();
-            Bukkit.getScheduler().runTaskLater(this, () -> openStorageMenu(p), 1L);
-        }
-    }
-
-    // ==================================================
-    //   LAGER mit Seiten
-    // ==================================================
-    private static final int STORAGE_ITEMS_PER_PAGE = 28; // 4 Reihen à 7 (mit Rahmen links/rechts)
-
-    private void openStorageMenu(Player p) {
-        Inventory inv = Bukkit.createInventory(null, 54, lang.getColored("storage.menu.title"));
-
-        ItemStack border = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
-        ItemMeta bm = border.getItemMeta(); bm.setDisplayName(" "); border.setItemMeta(bm);
-        for (int slot : BORDER_SLOTS) inv.setItem(slot, border);
-
-        List<Egg> stored = playerStorage.getOrDefault(p.getUniqueId(), new ArrayList<>());
-        int page = storagePage.getOrDefault(p.getUniqueId(), 0);
-        int totalPages = Math.max(1, (int) Math.ceil(stored.size() / (double) STORAGE_ITEMS_PER_PAGE));
-        if (page >= totalPages) page = totalPages - 1;
-        if (page < 0) page = 0;
-        storagePage.put(p.getUniqueId(), page);
-
-        // Slots innerhalb des Rahmens (4 Reihen à 7 = 28)
-        int[] contentSlots = {
-            10,11,12,13,14,15,16,
-            19,20,21,22,23,24,25,
-            28,29,30,31,32,33,34,
-            37,38,39,40,41,42,43
-        };
-
-        int start = page * STORAGE_ITEMS_PER_PAGE;
-        int end = Math.min(start + STORAGE_ITEMS_PER_PAGE, stored.size());
-
-        for (int i = start; i < end; i++) {
-            inv.setItem(contentSlots[i - start], createEggItem(stored.get(i)));
-        }
-
-        // Prev
-        if (page > 0) {
-            ItemStack prev = new ItemStack(Material.ARROW);
-            ItemMeta pm = prev.getItemMeta();
-            pm.setDisplayName(lang.getColored("storage.page.prev"));
-            prev.setItemMeta(pm);
-            inv.setItem(SLOT_STORAGE_PREV, prev);
-        }
-
-        // Next
-        if (page < totalPages - 1) {
-            ItemStack next = new ItemStack(Material.ARROW);
-            ItemMeta nm = next.getItemMeta();
-            nm.setDisplayName(lang.getColored("storage.page.next"));
-            next.setItemMeta(nm);
-            inv.setItem(SLOT_STORAGE_NEXT, next);
-        }
-
-        // Info
-        ItemStack info = new ItemStack(Material.PAPER);
-        ItemMeta im = info.getItemMeta();
-        im.setDisplayName(lang.color(lang.get("storage.page.info")
-                .replace("%page%", String.valueOf(page + 1))
-                .replace("%max%", String.valueOf(totalPages))));
-        info.setItemMeta(im);
-        inv.setItem(49, info);
-
-        p.openInventory(inv);
-    }
-
-    // ============================
-    // Egg-Klassen
-    // ============================
-    public class Egg {
-        public EggType type;
-        public int level;
-        public boolean isCharged;
-
-        public Egg(EggType type, int level, boolean isCharged) {
-            this.type = type;
-            this.level = level;
-            this.isCharged = isCharged;
-        }
-
-        public double getCurrentIncome() {
-            double base = type.baseIncome * Math.pow(type.upgradeMultiplier, level - 1);
-            return isCharged ? base * chargedMultiplier : base;
-        }
-
-        public double getUpgradeCost() {
-            return type.baseUpgradeCost * Math.pow(type.upgradeMultiplier, level - 1);
-        }
-
-        public double getSellPrice() {
-            return getUpgradeCost() * type.sellMultiplier;
-        }
-    }
-
-    public static class EggType {
-        public String key, name;
-        public double baseIncome, baseUpgradeCost, upgradeMultiplier, sellMultiplier;
-        public Material icon;
-
-        public EggType(String key, String name, double baseIncome, double baseUpgradeCost,
-                       double upgradeMultiplier, double sellMultiplier, Material icon) {
-            this.key = key;
-            this.name = name;
-            this.baseIncome = baseIncome;
-            this.baseUpgradeCost = baseUpgradeCost;
-            this.upgradeMultiplier = upgradeMultiplier;
-            this.sellMultiplier = sellMultiplier;
-            this.icon = icon;
-        }
-    }
-}
+            if (e.getCurrentItem() == null || e.getCurrentItem().getType()
