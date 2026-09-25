@@ -5,6 +5,10 @@
 language: de
 charged-multiplier: 1.25
 
+# Chance (in Prozent), dass ein Egg beim Vergeben "Charged" wird.
+# Beispiel: 20 = 20% Chance
+charged-chance: 20
+
 # ================================================
 #   EGG LISTE - Beliebig erweiterbar
 # ================================================
