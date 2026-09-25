@@ -1,5 +1,5 @@
 name: FancyEggs
-version: 1.6
+version: 1.7
 main: de.lmcstudio.fancyeggs.FancyEggs
 api-version: '26.1'
 softdepend: [Vault, PlaceholderAPI]
@@ -13,3 +13,18 @@ permissions:
     default: true
   fancyeggs.admin:
     default: op
+  fancyeggs.slots.1:
+    default: false
+    description: "1 aktiven Egg-Slot"
+  fancyeggs.slots.5:
+    default: false
+    description: "5 aktive Egg-Slots"
+  fancyeggs.slots.9:
+    default: true
+    description: "9 aktive Egg-Slots (Standard)"
+  fancyeggs.slots.18:
+    default: false
+    description: "18 aktive Egg-Slots (VIP)"
+  fancyeggs.slots.27:
+    default: false
+    description: "27 aktive Egg-Slots (VIP+)"
