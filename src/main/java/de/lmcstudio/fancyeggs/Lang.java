@@ -28,6 +28,7 @@ public class Lang {
             case "egg.sell_price": return GRAY+(en?"Sell Price: ":"Verkaufspreis: ")+RED+"$";
             case "egg.left_upgrade": return GOLD+BOLD+"➤ "+(en?"LEFT-CLICK to upgrade":"LEFT-KLICK zum Upgraden");
             case "egg.shift_sell": return RED+BOLD+"➤ "+(en?"SHIFT-CLICK to sell":"SHIFT-KLICK zum Verkaufen");
+            case "egg.right_remove": return RED+BOLD+"➤ "+(en?"RIGHT-CLICK to store":"RECHTS-KLICK zum Einlagern");
             case "egg.charged_tag": return PINK+BOLD+"[CHARGED] ";
             case "egg.charged_chance": return GRAY+(en?"Charged Chance: ":"Charged Chance: ")+PINK+BOLD+"%chance%%";
             case "egg.charged_bonus": return GRAY+(en?"Charged Bonus: ":"Charged Bonus: ")+PINK+BOLD+"+%bonus%%";
@@ -44,6 +45,7 @@ public class Lang {
             case "msg.not_enough": return RED+(en?"Not enough money! Needed: $":"Nicht genug Geld! Benötigt: $");
             case "msg.sold": return GOLD+BOLD+(en?"Sold %egg% for $%price%!":"%egg% für $%price% verkauft!");
             case "msg.only_players_menu": return RED+(en?"Only players.":"Nur Spieler.");
+            case "msg.slots_moved": return GOLD+(en?"Your slot limit decreased. %amount% egg(s) moved to storage.":"Dein Slot-Limit wurde verringert. %amount% Egg(s) ins Lager verschoben.");
 
             case "list.header": return GOLD+BOLD+(en?"========== FancyEggs List ==========":"========== FancyEggs Liste ==========");
             case "list.name": return GOLD+BOLD+"▶ ";
@@ -67,6 +69,21 @@ public class Lang {
             case "pending.click": return GOLD+BOLD+"➤ "+(en?"CLICK to collect":"KLICK zum Einsammeln");
             case "pending.collected": return GREEN+BOLD+(en?"Collected $%amount%!":"$%amount% eingesammelt!");
             case "pending.empty": return RED+(en?"Nothing to collect.":"Nichts zum Einsammeln.");
+
+            case "storage.name": return GOLD+BOLD+(en?"EGGS STORAGE":"EGGS LAGER");
+            case "storage.desc": return GRAY+(en?"Description":"Beschreibung");
+            case "storage.info": return GOLD+BOLD+(en?"Information:":"Information:");
+            case "storage.click": return WHITE+(en?"Click to view your storage.":"Klicke hier um dein Lager zu öffnen.");
+            case "storage.count": return GOLD+BOLD+(en?"➤ Stored: ":"➤ Gelagert: ");
+            case "storage.active": return GOLD+BOLD+(en?"➤ Active: ":"➤ Aktiv: ");
+            case "storage.moved_to_storage": return GOLD+BOLD+(en?"%egg% moved to storage.":"%egg% ins Lager verschoben.");
+            case "storage.moved_to_active": return GREEN+BOLD+(en?"%egg% equipped!":"%egg% ausgerüstet!");
+            case "storage.full_active": return RED+(en?"Max active eggs reached!":"Maximale aktive Eggs erreicht!");
+            case "storage.menu.title": return GOLD+BOLD+(en?"Eggs | Storage":"Eggs | Lager");
+            case "storage.page.prev": return GOLD+BOLD+"◀ "+(en?"Previous Page":"Vorherige Seite");
+            case "storage.page.next": return GOLD+BOLD+(en?"Next Page":"Nächste Seite")+" ▶";
+            case "storage.page.info": return GOLD+BOLD+(en?"Page ":"Seite ")+"%page%/%max%";
+            case "storage.page.click": return WHITE+(en?"Click to switch page.":"Klicke zum Wechseln.");
 
             case "console.vault_missing": return en?"Vault not found!":"Vault nicht gefunden!";
             case "console.enabled": return en?"FancyEggs loaded!":"FancyEggs geladen!";
