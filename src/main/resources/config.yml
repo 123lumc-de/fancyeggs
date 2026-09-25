@@ -1,21 +1,17 @@
-# ================================================
-#   FancyEggs - Konfiguration
-# ================================================
-
 language: de
+charged-chance: 20
 charged-multiplier: 1.25
 
-# Chance (in Prozent), dass ein Egg beim Vergeben "Charged" wird.
-# Beispiel: 20 = 20% Chance
-charged-chance: 20
+# ================================================
+#   SLOTS
+# ================================================
+# Fallback-Wert, falls der Spieler KEINE fancyeggs.slots.X Permission hat.
+# Höhere Ränge = mehr Slots (bis 27).
+default-slots: 1
 
 # ================================================
-#   EGG LISTE - Beliebig erweiterbar
+#   EGGS
 # ================================================
-# base-income: Geld pro SEKUNDE auf Level 1
-# base-upgrade-cost: Preis für das erste Upgrade
-# ================================================
-
 eggs:
   Chicken_Egg:
     display-name: "Chicken Egg"
