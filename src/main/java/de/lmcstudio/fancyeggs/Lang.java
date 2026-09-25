@@ -20,6 +20,7 @@ public class Lang {
         boolean en = lang.equals("en");
         switch (k) {
             case "menu.title": return GOLD+BOLD+(en?"Eggs | Menu":"Eggs | Menü");
+
             case "egg.desc": return GRAY+(en?"Description":"Beschreibung");
             case "egg.level": return AQUA+BOLD+"★ "+(en?"LEVEL ":"LEVEL ");
             case "egg.income": return GRAY+(en?"Money / Second: ":"Geld / Sekunde: ")+GREEN+"$";
@@ -28,8 +29,11 @@ public class Lang {
             case "egg.left_upgrade": return GOLD+BOLD+"➤ "+(en?"LEFT-CLICK to upgrade":"LEFT-KLICK zum Upgraden");
             case "egg.shift_sell": return RED+BOLD+"➤ "+(en?"SHIFT-CLICK to sell":"SHIFT-KLICK zum Verkaufen");
             case "egg.charged_tag": return PINK+BOLD+"[CHARGED] ";
+            case "egg.charged_chance": return GRAY+(en?"Charged Chance: ":"Charged Chance: ")+PINK+BOLD+"%chance%%";
+            case "egg.charged_bonus": return GRAY+(en?"Charged Bonus: ":"Charged Bonus: ")+PINK+BOLD+"+%bonus%%";
+
             case "msg.no_permission": return RED+(en?"No permission.":"Keine Rechte.");
-            case "msg.give_usage": return RED+(en?"Usage: /fancyeggs give <player> <egg> [charged]":"Nutzung: /fancyeggs give <Spieler> <EggKey> [charged]");
+            case "msg.give_usage": return RED+(en?"Usage: /fancyeggs give <player> <egg> [forced|normal]":"Nutzung: /fancyeggs give <Spieler> <EggKey> [forced|normal]");
             case "msg.available": return GOLD+BOLD+(en?"Available: ":"Verfügbar: ")+RESET+WHITE;
             case "msg.player_not_found": return RED+(en?"Player not found.":"Spieler nicht gefunden.");
             case "msg.egg_not_found": return RED+(en?"Egg not found.":"Egg nicht gefunden.");
@@ -40,12 +44,14 @@ public class Lang {
             case "msg.not_enough": return RED+(en?"Not enough money! Needed: $":"Nicht genug Geld! Benötigt: $");
             case "msg.sold": return GOLD+BOLD+(en?"Sold %egg% for $%price%!":"%egg% für $%price% verkauft!");
             case "msg.only_players_menu": return RED+(en?"Only players.":"Nur Spieler.");
+
             case "list.header": return GOLD+BOLD+(en?"========== FancyEggs List ==========":"========== FancyEggs Liste ==========");
             case "list.name": return GOLD+BOLD+"▶ ";
             case "list.base_income": return GRAY+(en?"Base income: ":"Basis-Einkommen: ")+GREEN+"$";
             case "list.upgrade_cost": return GRAY+(en?"Upgrade cost: ":"Upgrade-Kosten: ")+RED+"$";
             case "list.multiplier": return GRAY+(en?"Multiplier: ":"Multiplikator: ")+AQUA+"x";
             case "list.footer": return GOLD+BOLD+"===================================";
+
             case "autocollect.on_name": return GREEN+BOLD+(en?"AUTO-COLLECT: ON":"AUTO-COLLECT: AN");
             case "autocollect.off_name": return RED+BOLD+(en?"AUTO-COLLECT: OFF":"AUTO-COLLECT: AUS");
             case "autocollect.desc": return GRAY+(en?"Description":"Beschreibung");
@@ -53,6 +59,7 @@ public class Lang {
             case "autocollect.on_text": return WHITE+(en?"Money is auto-collected every second.":"Geld wird jede Sekunde automatisch gesammelt.");
             case "autocollect.off_text": return WHITE+(en?"Money accumulates in the chest.":"Geld sammelt sich in der Kiste an.");
             case "autocollect.click": return GOLD+BOLD+"➤ "+(en?"CLICK to toggle":"KLICK zum Umschalten");
+
             case "pending.name": return GOLD+BOLD+(en?"PENDING MONEY":"AUSSTEHENDES GELD");
             case "pending.desc": return GRAY+(en?"Description":"Beschreibung");
             case "pending.info": return GOLD+BOLD+(en?"Information:":"Information:");
@@ -60,6 +67,7 @@ public class Lang {
             case "pending.click": return GOLD+BOLD+"➤ "+(en?"CLICK to collect":"KLICK zum Einsammeln");
             case "pending.collected": return GREEN+BOLD+(en?"Collected $%amount%!":"$%amount% eingesammelt!");
             case "pending.empty": return RED+(en?"Nothing to collect.":"Nichts zum Einsammeln.");
+
             case "console.vault_missing": return en?"Vault not found!":"Vault nicht gefunden!";
             case "console.enabled": return en?"FancyEggs loaded!":"FancyEggs geladen!";
             default: return "&cMissing: "+k;
