@@ -30,6 +30,8 @@ public class FancyEggs extends JavaPlugin implements Listener {
     private TopManager topManager;
     private EggStorage eggStorage;
     private double chargedMultiplier = 1.25;
+    private int chargedChance = 20;
+    private final Random random = new Random();
 
     private final Map<UUID, List<Egg>> playerEggs = new HashMap<>();
     private final Map<UUID, Boolean> autoCollect = new HashMap<>();
@@ -50,14 +52,10 @@ public class FancyEggs extends JavaPlugin implements Listener {
         saveDefaultConfig();
         reloadConfig();
 
-        // 1) Config zuerst laden (Egg-Typen sind wichtig für das EggStorage)
         loadConfigValues();
-
-        // 2) Storage + TopManager initialisieren
         this.topManager = new TopManager(this);
         this.eggStorage = new EggStorage(this);
 
-        // 3) PlaceholderAPI-Expansion registrieren
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             try {
                 new FancyEggsExpansion(this).register();
@@ -75,7 +73,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
             }
             getServer().getPluginManager().registerEvents(this, this);
 
-            // Einkommens-Timer (jede Sekunde)
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -95,23 +92,21 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 }
             }.runTaskTimer(this, 20L, 20L);
 
-            // Auto-Save alle 5 Minuten (Tops + Eggs)
             new BukkitRunnable() {
                 @Override
                 public void run() {
                     topManager.save();
                     eggStorage.save();
-                    getLogger().info("Auto-Save: tops.yml & eggs.yml gespeichert.");
                 }
             }.runTaskTimer(this, 6000L, 6000L);
 
             getLogger().info(lang.get("console.enabled"));
         }, 1L);
 
-        // bStats
         try {
             Metrics m = new Metrics(this, 34188);
             m.addCustomChart(new SimplePie("language", () -> getConfig().getString("language", "de")));
+            m.addCustomChart(new SimplePie("charged_chance", () -> String.valueOf(chargedChance)));
             m.addCustomChart(new SimplePie("eggs_owned_chart", () -> {
                 int total = 0;
                 for (List<Egg> list : playerEggs.values()) total += list.size();
@@ -123,18 +118,16 @@ public class FancyEggs extends JavaPlugin implements Listener {
         }
     }
 
-    /** Wird vom EggStorage gebraucht */
     public List<EggType> getEggTypes() { return eggTypes; }
-
-    /** Wird vom TopManager gebraucht */
     public Map<UUID, List<Egg>> getPlayerEggs() { return playerEggs; }
-
-    /** Wird von der PlaceholderAPI-Expansion gebraucht */
     public TopManager getTopManager() { return topManager; }
+    public int getChargedChance() { return chargedChance; }
+    public double getChargedMultiplier() { return chargedMultiplier; }
 
     private void loadConfigValues() {
         this.lang = new Lang(getConfig());
         this.chargedMultiplier = getConfig().getDouble("charged-multiplier", 1.25);
+        this.chargedChance = getConfig().getInt("charged-chance", 20);
         eggTypes.clear();
 
         if (!getConfig().isConfigurationSection("eggs")) {
@@ -159,21 +152,17 @@ public class FancyEggs extends JavaPlugin implements Listener {
             }
             eggTypes.add(new EggType(key, dn, bi, bu, um, sm, icon));
         }
-        getLogger().info(eggTypes.size() + " Eggs aus der Config geladen.");
+        getLogger().info(eggTypes.size() + " Eggs aus der Config geladen (Charged-Chance: " + chargedChance + "%).");
     }
 
     @Override
     public void onDisable() {
-        // Pending auszahlen
         for (Map.Entry<UUID, Double> e : pendingMoney.entrySet()) {
             Player p = Bukkit.getPlayer(e.getKey());
             if (p != null && econ != null) econ.depositPlayer(p, e.getValue());
         }
-        // Alles speichern
         if (topManager != null) topManager.save();
         if (eggStorage != null) eggStorage.save();
-        getLogger().info("Alle Daten gespeichert.");
-
         playerEggs.clear();
         pendingMoney.clear();
         autoCollect.clear();
@@ -189,16 +178,13 @@ public class FancyEggs extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
-
-        // /fancyeggs reload
         if (a.length > 0 && a[0].equalsIgnoreCase("reload")) {
             if (!s.hasPermission("fancyeggs.admin")) { s.sendMessage(lang.getColored("msg.no_permission")); return true; }
             reloadConfig(); loadConfigValues();
-            s.sendMessage(lang.color(Lang.GOLD+Lang.BOLD+"Reloaded. "+eggTypes.size()+" Eggs aktiv."));
+            s.sendMessage(lang.color(Lang.GOLD+Lang.BOLD+"Reloaded. "+eggTypes.size()+" Eggs aktiv. Charged-Chance: "+chargedChance+"%"));
             return true;
         }
 
-        // /fancyeggs save  (manueller Save)
         if (a.length > 0 && a[0].equalsIgnoreCase("save")) {
             if (!s.hasPermission("fancyeggs.admin")) { s.sendMessage(lang.getColored("msg.no_permission")); return true; }
             eggStorage.save();
@@ -207,7 +193,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
             return true;
         }
 
-        // /fancyeggs give <Spieler> <EggKey> [charged]
         if (a.length > 0 && a[0].equalsIgnoreCase("give")) {
             if (!s.hasPermission("fancyeggs.admin")) { s.sendMessage(lang.getColored("msg.no_permission")); return true; }
             if (a.length < 3) {
@@ -222,9 +207,18 @@ public class FancyEggs extends JavaPlugin implements Listener {
                     .findFirst().orElse(null);
             if (type == null) { s.sendMessage(lang.getColored("msg.egg_not_found")); return true; }
 
-            boolean ch = a.length > 3 && a[3].equalsIgnoreCase("charged");
+            // Charged-Chance würfeln (oder erzwingen)
+            boolean ch;
+            if (a.length > 3 && a[3].equalsIgnoreCase("forced")) {
+                ch = true;
+            } else if (a.length > 3 && a[3].equalsIgnoreCase("normal")) {
+                ch = false;
+            } else {
+                ch = random.nextInt(100) < chargedChance;
+            }
+
             playerEggs.computeIfAbsent(t.getUniqueId(), k -> new ArrayList<>()).add(new Egg(type, 1, ch));
-            eggStorage.save(); // sofort speichern!
+            eggStorage.save();
 
             String sfx = ch ? lang.getColored("msg.charged_suffix") : "";
             s.sendMessage(lang.color(lang.get("msg.give_sender")
@@ -234,7 +228,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
             return true;
         }
 
-        // /fancyeggs list
         if (a.length > 0 && a[0].equalsIgnoreCase("list")) {
             s.sendMessage(lang.getColored("list.header"));
             for (EggType t : eggTypes) {
@@ -247,7 +240,6 @@ public class FancyEggs extends JavaPlugin implements Listener {
             return true;
         }
 
-        // Standard -> Menü
         if (s instanceof Player) openEggsMenu((Player) s);
         else s.sendMessage(lang.getColored("msg.only_players_menu"));
         return true;
@@ -311,6 +303,11 @@ public class FancyEggs extends JavaPlugin implements Listener {
         lore.add(lang.getColored("egg.income") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(egg.getCurrentIncome())));
         lore.add(lang.getColored("egg.upgrade_price") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(egg.getUpgradeCost())));
         lore.add(lang.getColored("egg.sell_price") + lang.color(Lang.GOLD+Lang.BOLD+NumberFormatter.format(egg.getSellPrice())));
+        lore.add("");
+        // Charged-Info
+        lore.add(lang.color(lang.get("egg.charged_chance").replace("%chance%", String.valueOf(chargedChance))));
+        int bonusPercent = (int) Math.round((chargedMultiplier - 1.0) * 100);
+        lore.add(lang.color(lang.get("egg.charged_bonus").replace("%bonus%", String.valueOf(bonusPercent))));
         lore.add("");
         lore.add(lang.getColored("egg.left_upgrade"));
         lore.add(lang.getColored("egg.shift_sell"));
@@ -388,9 +385,7 @@ public class FancyEggs extends JavaPlugin implements Listener {
                 p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             }
         }
-        // SOFORT speichern (wichtig für Upgrade/Verkauf)
         eggStorage.save();
-
         p.closeInventory();
         Bukkit.getScheduler().runTaskLater(this, () -> openEggsMenu(p), 1L);
     }
