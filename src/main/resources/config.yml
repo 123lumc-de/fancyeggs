@@ -52,3 +52,24 @@ eggs:
     base-upgrade-cost: 50.0
     upgrade-multiplier: 1.8
     sell-multiplier: 4.0
+
+# ================================================
+#   WÄHRUNGS-EINSTELLUNGEN
+# ================================================
+# Standard: FancyEggs liest die Währung automatisch aus Vault.
+# Wenn dein Economy-Plugin etwas Falsches ausgibt, kannst du es hier überschreiben.
+#
+# currency.symbol:  Leer lassen = Vault nutzen
+#                   Beispiel: "$", "€", "Coins", "Taler"
+#
+# currency.format:  Platzhalter:
+#                     {symbol} = Währungssymbol
+#                     {amount} = Formatierter Betrag (z.B. 1.50K)
+#                   Beispiele:
+#                     "{symbol}{amount}"    ->  $1.50K
+#                     "{amount} {symbol}"   ->  1.50K Coins
+#                     "{symbol} {amount}"   ->  $ 1.50K
+# ================================================
+currency:
+  symbol: ""                # Leer = Vault nutzen
+  format: "{symbol}{amount}"
