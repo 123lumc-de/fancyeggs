@@ -30,11 +30,11 @@
     </repositories>
 
     <dependencies>
-        <!-- Paper API 26.2 -->
+        <!-- Paper API 26.2 (neueste stabile Build) -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>26.2.build.+</version>
+            <version>26.2.build.129-stable</version>
             <scope>provided</scope>
         </dependency>
 
