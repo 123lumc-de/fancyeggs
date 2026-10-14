@@ -25,18 +25,12 @@ jobs:
       - name: Build with Maven
         run: mvn -B clean package --file pom.xml
 
-      - name: Show JAR files
-        run: ls -la target/
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: "FancyEggs Build #${{ github.run_number }}"
-          body: |
-            Automatischer Build #${{ github.run_number }}
-            Commit: `${{ github.sha }}`
-            Branch: `${{ github.ref_name }}`
+          body: "Automatischer Build #${{ github.run_number }}"
           files: target/FancyEggs-*.jar
           draft: false
           prerelease: false
