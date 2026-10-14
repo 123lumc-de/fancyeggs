@@ -6,7 +6,7 @@
 
     <groupId>de.lmcstudio</groupId>
     <artifactId>FancyEggs</artifactId>
-    <version>1.8</version>
+    <version>2.0</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -30,35 +30,44 @@
     </repositories>
 
     <dependencies>
-        <!-- Paper API 26.2 (neueste stabile Build) -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>26.2.build.129-stable</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- Vault API -->
         <dependency>
             <groupId>com.github.MilkBowl</groupId>
             <artifactId>VaultAPI</artifactId>
             <version>1.7</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- PlaceholderAPI -->
         <dependency>
             <groupId>me.clip</groupId>
             <artifactId>placeholderapi</artifactId>
             <version>2.11.6</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- bStats -->
         <dependency>
             <groupId>org.bstats</groupId>
             <artifactId>bstats-bukkit</artifactId>
             <version>3.1.0</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- H2 Datenbank (lokale Datei-DB) -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.3.232</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- MySQL Connector -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>9.1.0</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>
@@ -86,19 +95,24 @@
                             <pattern>org.bstats</pattern>
                             <shadedPattern>de.lmcstudio.fancyeggs.libs.bstats</shadedPattern>
                         </relocation>
+                        <relocation>
+                            <pattern>com.mysql</pattern>
+                            <shadedPattern>de.lmcstudio.fancyeggs.libs.mysql</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.h2</pattern>
+                            <shadedPattern>de.lmcstudio.fancyeggs.libs.h2</shadedPattern>
+                        </relocation>
                     </relocations>
                 </configuration>
                 <executions>
                     <execution>
                         <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
+                        <goals><goal>shade</goal></goals>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
-
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
