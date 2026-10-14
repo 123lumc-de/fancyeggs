@@ -35,10 +35,17 @@ public class DatabaseManager {
         }
     }
 
+    /** Gibt "h2" oder "mysql" zurück */
+    public String getType() {
+        return type;
+    }
+
+    /** Tabellen-Präfix (nur bei MySQL relevant, bei H2 leer) */
     public String getTablePrefix() {
         return type.equals("mysql") ? tablePrefix : "";
     }
 
+    /** Baut die Datenbank-Verbindung auf und legt Tabellen an. */
     public boolean connect() {
         try {
             if (type.equals("mysql")) {
@@ -64,6 +71,7 @@ public class DatabaseManager {
         }
     }
 
+    /** Gibt die aktuelle Connection zurück (versucht Reconnect, falls geschlossen). */
     public Connection getConnection() {
         try {
             if (connection == null || connection.isClosed()) connect();
@@ -73,6 +81,7 @@ public class DatabaseManager {
         return connection;
     }
 
+    /** Schließt die Verbindung. */
     public void disconnect() {
         try {
             if (connection != null && !connection.isClosed()) connection.close();
@@ -81,11 +90,12 @@ public class DatabaseManager {
         }
     }
 
+    /** Legt alle Tabellen an, falls sie noch nicht existieren. */
     private void createTables() throws SQLException {
         String p = getTablePrefix();
         try (Statement st = connection.createStatement()) {
 
-            // Aktive Eggs
+            // Aktive Eggs (pro Spieler, mit Slot-Index für die Reihenfolge)
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + p + "eggs_active ("
                     + "uuid VARCHAR(36) NOT NULL, "
                     + "egg_key VARCHAR(64) NOT NULL, "
@@ -95,7 +105,7 @@ public class DatabaseManager {
                     + "PRIMARY KEY (uuid, egg_key, slot_index)"
                     + ")");
 
-            // Lager-Eggs
+            // Lager-Eggs (pro Spieler, ID für Reihenfolge)
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + p + "eggs_storage ("
                     + "id INT AUTO_INCREMENT PRIMARY KEY, "
                     + "uuid VARCHAR(36) NOT NULL, "
@@ -104,7 +114,7 @@ public class DatabaseManager {
                     + "charged TINYINT NOT NULL DEFAULT 0"
                     + ")");
 
-            // Top-Rangliste
+            // Top-Rangliste (offline Spieler, name + income)
             st.executeUpdate("CREATE TABLE IF NOT EXISTS " + p + "tops ("
                     + "uuid VARCHAR(36) NOT NULL PRIMARY KEY, "
                     + "name VARCHAR(64) NOT NULL, "
