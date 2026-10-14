@@ -1,100 +1,69 @@
 package de.lmcstudio.fancyeggs;
 
-import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-
-import java.io.File;
-import java.io.IOException;
+import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TopManager {
 
     private final FancyEggs plugin;
-    private final File file;
-    private FileConfiguration config;
-
-    // UUID -> PlayerName (damit Offline-Spieler angezeigt werden können)
     private final Map<UUID, String> names = new ConcurrentHashMap<>();
-    // UUID -> Gesamteinkommen/Sekunde (gespeichert)
     private final Map<UUID, Double> incomes = new ConcurrentHashMap<>();
 
     public TopManager(FancyEggs plugin) {
         this.plugin = plugin;
-        this.file = new File(plugin.getDataFolder(), "tops.yml");
         load();
     }
 
-    /** Lädt tops.yml */
     public void load() {
-        if (!file.exists()) {
-            try {
-                file.getParentFile().mkdirs();
-                file.createNewFile();
-            } catch (IOException e) {
-                plugin.getLogger().warning("tops.yml konnte nicht erstellt werden: " + e.getMessage());
-            }
-        }
-        config = YamlConfiguration.loadConfiguration(file);
         names.clear();
         incomes.clear();
-
-        if (config.isConfigurationSection("players")) {
-            for (String uuidStr : config.getConfigurationSection("players").getKeys(false)) {
-                try {
-                    UUID uuid = UUID.fromString(uuidStr);
-                    String name = config.getString("players." + uuidStr + ".name", "Unknown");
-                    double income = config.getDouble("players." + uuidStr + ".income", 0.0);
-                    names.put(uuid, name);
-                    incomes.put(uuid, income);
-                } catch (IllegalArgumentException ignored) {}
+        String p = plugin.getDatabaseManager().getTablePrefix();
+        try (PreparedStatement ps = plugin.getDatabaseManager().getConnection()
+                .prepareStatement("SELECT uuid, name, income FROM " + p + "tops")) {
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                UUID uuid = UUID.fromString(rs.getString("uuid"));
+                names.put(uuid, rs.getString("name"));
+                incomes.put(uuid, rs.getDouble("income"));
             }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("TopManager laden fehlgeschlagen: " + e.getMessage());
         }
-        plugin.getLogger().info("TopManager: " + incomes.size() + " Einträge geladen.");
+        plugin.getLogger().info("TopManager (DB): " + incomes.size() + " Einträge geladen.");
     }
 
-    /** Speichert tops.yml */
     public void save() {
-        if (config == null) return;
-        for (Map.Entry<UUID, Double> e : incomes.entrySet()) {
-            String path = "players." + e.getKey() + ".";
-            config.set(path + "name", names.getOrDefault(e.getKey(), "Unknown"));
-            config.set(path + "income", e.getValue());
-        }
-        try {
-            config.save(file);
-        } catch (IOException ex) {
-            plugin.getLogger().warning("tops.yml konnte nicht gespeichert werden: " + ex.getMessage());
+        String p = plugin.getDatabaseManager().getTablePrefix();
+        try (Connection con = plugin.getDatabaseManager().getConnection()) {
+            try (PreparedStatement ins = con.prepareStatement(
+                    "REPLACE INTO " + p + "tops (uuid, name, income) VALUES (?, ?, ?)")) {
+                for (Map.Entry<UUID, Double> e : incomes.entrySet()) {
+                    ins.setString(1, e.getKey().toString());
+                    ins.setString(2, names.getOrDefault(e.getKey(), "Unknown"));
+                    ins.setDouble(3, e.getValue());
+                    ins.addBatch();
+                }
+                ins.executeBatch();
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("TopManager speichern fehlgeschlagen: " + e.getMessage());
         }
     }
 
-    /** Wird jede Sekunde von FancyEggs aufgerufen */
     public void updatePlayer(UUID uuid, String name, double income) {
         names.put(uuid, name);
         incomes.put(uuid, income);
     }
 
-    /** Wird für den "name" Placeholder benutzt */
-    public String getNameByUUID(UUID uuid) {
-        return names.getOrDefault(uuid, "Unknown");
-    }
+    public String getNameByUUID(UUID uuid) { return names.getOrDefault(uuid, "Unknown"); }
+    public double getIncomeByUUID(UUID uuid) { return incomes.getOrDefault(uuid, 0.0); }
 
-    /** Wird für den "value" Placeholder benutzt */
-    public double getIncomeByUUID(UUID uuid) {
-        return incomes.getOrDefault(uuid, 0.0);
-    }
-
-    /** Sortierte Rangliste (absteigend nach Einkommen) */
     public List<Map.Entry<UUID, Double>> getSorted() {
         List<Map.Entry<UUID, Double>> list = new ArrayList<>(incomes.entrySet());
         list.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
         return list;
     }
 
-    /** Anzahl Einträge */
-    public int size() {
-        return incomes.size();
-    }
+    public int size() { return incomes.size(); }
 }
