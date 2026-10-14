@@ -1,0 +1,92 @@
+# ================================================
+#   FancyEggs - English Language (en_US)
+# ================================================
+# Colors:
+#   Default: &#RRGGBB (Hex) or &a, &b, &c (Legacy)
+#   Bold: &l
+# Placeholders:
+#   %chance%, %bonus%, %amount%, %egg%, %price%, %player%,
+#   %page%, %max%, %count%
+# ================================================
+
+# === Menu titles ===
+menu.title: "&#F69D28&lEggs | Menu"
+storage.menu.title: "&#F69D28&lEggs | Storage"
+
+# === Egg item (Lore) ===
+egg.desc: "&#AAAAAADescription"
+egg.level: "&#55FFFF&l★ LEVEL "
+egg.income: "&#AAAAAAMoney / Second: &#55FF55$"
+egg.upgrade_price: "&#AAAAAAUpgrade Price: &#FF5555$"
+egg.sell_price: "&#AAAAAASell Price: &#FF5555$"
+egg.left_upgrade: "&#F69D28&l➤ LEFT-CLICK to upgrade"
+egg.right_remove: "&#F69D28&l➤ RIGHT-CLICK to store"
+egg.charged_tag: "&#FF55FF&l[CHARGED] "
+egg.charged_chance: "&#AAAAAACharged Chance: &#FF55FF&l%chance%%"
+egg.charged_bonus: "&#AAAAAACharged Bonus: &#FF55FF&l+%bonus%%"
+
+# === Chat messages ===
+msg.no_permission: "&#FF5555No permission."
+msg.give_usage: "&#FF5555Usage: /fancyeggs give <player> <egg> [forced|normal]"
+msg.available: "&#F69D28&lAvailable: &r&#FFFFFF"
+msg.player_not_found: "&#FF5555Player not found."
+msg.egg_not_found: "&#FF5555Egg not found."
+msg.give_sender: "&#F69D28&lYou gave %player% a %egg%%charged%."
+msg.give_target: "&#F69D28&lYou received a %egg%%charged%!"
+msg.charged_suffix: "&#FF55FF&l (Charged)"
+msg.upgraded: "&#F69D28&lEgg upgraded! New Level: &#55FFFF"
+msg.not_enough: "&#FF5555Not enough money! Needed: $"
+msg.sold: "&#F69D28&lSold %egg% for $%price%!"
+msg.only_players_menu: "&#FF5555Only players can open the menu."
+msg.slots_moved: "&#F69D28Your slot limit decreased. %amount% egg(s) moved to storage."
+
+# === /fancyeggs list ===
+list.header: "&#F69D28&l========== FancyEggs List =========="
+list.name: "&#F69D28&l▶ "
+list.base_income: "&#AAAAAABase income: &#55FF55$"
+list.upgrade_cost: "&#AAAAAAUpgrade cost: &#FF5555$"
+list.multiplier: "&#AAAAAAMultiplier: &#55FFFF"
+list.footer: "&#F69D28&l==================================="
+
+# === Auto-Collect Button ===
+autocollect.on_name: "&#55FF55&lAUTO-COLLECT: ON"
+autocollect.off_name: "&#FF5555&lAUTO-COLLECT: OFF"
+autocollect.desc: "&#AAAAAADescription"
+autocollect.info: "&#F69D28&lInformation:"
+autocollect.on_text: "&#FFFFFFMoney is auto-collected every second."
+autocollect.off_text: "&#FFFFFFMoney accumulates in the chest."
+autocollect.click: "&#F69D28&l➤ CLICK to toggle"
+
+# === Pending Chest ===
+pending.name: "&#F69D28&lPENDING MONEY"
+pending.desc: "&#AAAAAADescription"
+pending.info: "&#F69D28&lInformation:"
+pending.amount: "&#AAAAAAPending: "
+pending.click: "&#F69D28&l➤ CLICK to collect"
+pending.collected: "&#55FF55&lCollected $%amount%!"
+pending.empty: "&#FF5555Nothing to collect."
+
+# === Storage ===
+storage.name: "&#F69D28&lEGGS STORAGE"
+storage.desc: "&#AAAAAADescription"
+storage.info: "&#F69D28&lInformation:"
+storage.click: "&#FFFFFFClick to view your storage."
+storage.count: "&#F69D28&l➤ Stored: "
+storage.active: "&#F69D28&l➤ Active: "
+storage.moved_to_storage: "&#F69D28&l%egg% moved to storage."
+storage.moved_to_active: "&#55FF55&l%egg% equipped!"
+storage.full_active: "&#FF5555Max active eggs reached!"
+storage.page.prev: "&#F69D28&l◀ Previous Page"
+storage.page.next: "&#F69D28&lNext Page ▶"
+storage.page.info: "&#F69D28&lPage %page%/%max%"
+storage.page.click: "&#FFFFFFClick to switch page."
+storage.back.name: "&#F69D28&l◀ BACK TO MENU"
+storage.back.lore: "&#FFFFFFClick to go back to the main menu."
+storage.egg.left_sell: "&#FF5555&l➤ LEFT-CLICK to sell"
+storage.egg.right_equip: "&#55FF55&l➤ RIGHT-CLICK to equip"
+storage.egg.shift_sell_all: "&#F69D28&l➤ SHIFT-CLICK to sell all"
+
+# === Console ===
+console.vault_missing: "Vault not found!"
+console.enabled: "FancyEggs loaded!"
+console.storage_type: "Storage type: %type%"
