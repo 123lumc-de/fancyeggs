@@ -1,0 +1,92 @@
+# ================================================
+#   FancyEggs - Deutsche Sprache (de_DE)
+# ================================================
+# Farben:
+#   Standard: &#RRGGBB (Hex) oder &a, &b, &c (Legacy)
+#   Fett: &l
+# Platzhalter:
+#   %chance%, %bonus%, %amount%, %egg%, %price%, %player%,
+#   %page%, %max%, %count% (je nach Kontext)
+# ================================================
+
+# === Menü-Titel ===
+menu.title: "&#F69D28&lEggs | Menü"
+storage.menu.title: "&#F69D28&lEggs | Lager"
+
+# === Egg-Item (Lore) ===
+egg.desc: "&#AAAAAABeschreibung"
+egg.level: "&#55FFFF&l★ LEVEL "
+egg.income: "&#AAAAAAGeld / Sekunde: &#55FF55$"
+egg.upgrade_price: "&#AAAAAAUpgrade Preis: &#FF5555$"
+egg.sell_price: "&#AAAAAAVerkaufspreis: &#FF5555$"
+egg.left_upgrade: "&#F69D28&l➤ LINKS-KLICK zum Upgraden"
+egg.right_remove: "&#F69D28&l➤ RECHTS-KLICK zum Einlagern"
+egg.charged_tag: "&#FF55FF&l[CHARGED] "
+egg.charged_chance: "&#AAAAAACharged Chance: &#FF55FF&l%chance%%"
+egg.charged_bonus: "&#AAAAAACharged Bonus: &#FF55FF&l+%bonus%%"
+
+# === Chat-Nachrichten ===
+msg.no_permission: "&#FF5555Keine Rechte."
+msg.give_usage: "&#FF5555Nutzung: /fancyeggs give <Spieler> <EggKey> [forced|normal]"
+msg.available: "&#F69D28&lVerfügbar: &r&#FFFFFF"
+msg.player_not_found: "&#FF5555Spieler nicht gefunden."
+msg.egg_not_found: "&#FF5555Egg nicht gefunden."
+msg.give_sender: "&#F69D28&lDu hast %player% ein %egg%%charged% gegeben."
+msg.give_target: "&#F69D28&lDu hast ein %egg%%charged% erhalten!"
+msg.charged_suffix: "&#FF55FF&l (Charged)"
+msg.upgraded: "&#F69D28&lEgg upgraded! Neues Level: &#55FFFF"
+msg.not_enough: "&#FF5555Nicht genug Geld! Benötigt: $"
+msg.sold: "&#F69D28&l%egg% für $%price% verkauft!"
+msg.only_players_menu: "&#FF5555Nur Spieler können das Menü öffnen."
+msg.slots_moved: "&#F69D28Dein Slot-Limit wurde verringert. %amount% Egg(s) ins Lager verschoben."
+
+# === /fancyeggs list ===
+list.header: "&#F69D28&l========== FancyEggs Liste =========="
+list.name: "&#F69D28&l▶ "
+list.base_income: "&#AAAAAABasis-Einkommen: &#55FF55$"
+list.upgrade_cost: "&#AAAAAAUpgrade-Kosten: &#FF5555$"
+list.multiplier: "&#AAAAAAMultiplikator: &#55FFFF"
+list.footer: "&#F69D28&l==================================="
+
+# === Auto-Collect Button ===
+autocollect.on_name: "&#55FF55&lAUTO-COLLECT: AN"
+autocollect.off_name: "&#FF5555&lAUTO-COLLECT: AUS"
+autocollect.desc: "&#AAAAAABeschreibung"
+autocollect.info: "&#F69D28&lInformation:"
+autocollect.on_text: "&#FFFFFFGeld wird jede Sekunde automatisch gesammelt."
+autocollect.off_text: "&#FFFFFFGeld sammelt sich in der Kiste an."
+autocollect.click: "&#F69D28&l➤ KLICK zum Umschalten"
+
+# === Pending Chest ===
+pending.name: "&#F69D28&lAUSSTEHENDES GELD"
+pending.desc: "&#AAAAAABeschreibung"
+pending.info: "&#F69D28&lInformation:"
+pending.amount: "&#AAAAAAAusstehend: "
+pending.click: "&#F69D28&l➤ KLICK zum Einsammeln"
+pending.collected: "&#55FF55&l$%amount% eingesammelt!"
+pending.empty: "&#FF5555Nichts zum Einsammeln."
+
+# === Storage ===
+storage.name: "&#F69D28&lEGGS LAGER"
+storage.desc: "&#AAAAAABeschreibung"
+storage.info: "&#F69D28&lInformation:"
+storage.click: "&#FFFFFFKlicke hier um dein Lager zu öffnen."
+storage.count: "&#F69D28&l➤ Gelagert: "
+storage.active: "&#F69D28&l➤ Aktiv: "
+storage.moved_to_storage: "&#F69D28&l%egg% ins Lager verschoben."
+storage.moved_to_active: "&#55FF55&l%egg% ausgerüstet!"
+storage.full_active: "&#FF5555Maximale aktive Eggs erreicht!"
+storage.page.prev: "&#F69D28&l◀ Vorherige Seite"
+storage.page.next: "&#F69D28&lNächste Seite ▶"
+storage.page.info: "&#F69D28&lSeite %page%/%max%"
+storage.page.click: "&#FFFFFFKlicke zum Wechseln."
+storage.back.name: "&#F69D28&l◀ ZURÜCK ZUM MENÜ"
+storage.back.lore: "&#FFFFFFKlicke um zum Hauptmenü zurückzukehren."
+storage.egg.left_sell: "&#FF5555&l➤ LINKS-KLICK zum Verkaufen"
+storage.egg.right_equip: "&#55FF55&l➤ RECHTS-KLICK zum Ausrüsten"
+storage.egg.shift_sell_all: "&#F69D28&l➤ SHIFT-KLICK zum Alle-Verkaufen"
+
+# === Console ===
+console.vault_missing: "Vault nicht gefunden!"
+console.enabled: "FancyEggs geladen!"
+console.storage_type: "Speicher-Typ: %type%"
