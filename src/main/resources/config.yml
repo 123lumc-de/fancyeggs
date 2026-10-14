@@ -1,17 +1,33 @@
 language: de
 charged-chance: 20
 charged-multiplier: 1.25
-
-# ================================================
-#   SLOTS
-# ================================================
-# Fallback-Wert, falls der Spieler KEINE fancyeggs.slots.X Permission hat.
-# Höhere Ränge = mehr Slots (bis 27).
 default-slots: 1
 
 # ================================================
-#   EGGS
+#   DATENBANK
 # ================================================
+# type: h2 oder mysql
+#   h2    = lokale Datei-Datenbank (kein Setup nötig, empfohlen für 1 Server)
+#   mysql = externe Datenbank (empfohlen für Netzwerke / mehrere Server)
+#
+# Bei "mysql" müssen die mysql-Werte ausgefüllt werden.
+# ================================================
+storage:
+  type: h2
+
+  # Wird nur genutzt, wenn type = mysql ist
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "fancyeggs"
+    username: "root"
+    password: ""
+    table-prefix: "fancyeggs_"
+
+  # Wird nur genutzt, wenn type = h2 ist
+  h2:
+    file: "data"        # Datei heißt dann plugins/FancyEggs/data.mv.db
+
 eggs:
   Chicken_Egg:
     display-name: "Chicken Egg"
