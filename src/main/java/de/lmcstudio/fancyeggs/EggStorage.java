@@ -1,109 +1,136 @@
 package de.lmcstudio.fancyeggs;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.Bukkit;
 
-import java.io.File;
-import java.io.IOException;
+import java.sql.*;
 import java.util.*;
 
 public class EggStorage {
 
     private final FancyEggs plugin;
-    private final File file;
-    private FileConfiguration config;
 
     public EggStorage(FancyEggs plugin) {
         this.plugin = plugin;
-        this.file = new File(plugin.getDataFolder(), "eggs.yml");
-        load();
     }
 
+    /** Lädt alle Eggs aus der DB in die In-Memory-Maps. */
     public void load() {
-        if (!file.exists()) {
-            try {
-                file.getParentFile().mkdirs();
-                file.createNewFile();
-            } catch (IOException e) {
-                plugin.getLogger().warning("eggs.yml konnte nicht erstellt werden: " + e.getMessage());
-                return;
-            }
-        }
-        config = YamlConfiguration.loadConfiguration(file);
-
         Map<UUID, List<FancyEggs.Egg>> active = plugin.getPlayerEggs();
         Map<UUID, List<FancyEggs.Egg>> storage = plugin.getPlayerStorage();
         active.clear();
         storage.clear();
 
+        String p = plugin.getDatabaseManager().getTablePrefix();
+
         // Aktive Eggs
-        if (config.isConfigurationSection("players")) {
-            for (String uuidStr : config.getConfigurationSection("players").getKeys(false)) {
-                UUID uuid;
-                try { uuid = UUID.fromString(uuidStr); } catch (IllegalArgumentException ex) { continue; }
-                List<FancyEggs.Egg> list = parseList(config.getMapList("players." + uuidStr + ".eggs"));
-                if (!list.isEmpty()) active.put(uuid, list);
+        try (PreparedStatement ps = plugin.getDatabaseManager().getConnection()
+                .prepareStatement("SELECT uuid, egg_key, level, charged, slot_index FROM " + p
+                        + "eggs_active ORDER BY uuid, slot_index ASC")) {
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                UUID uuid = UUID.fromString(rs.getString("uuid"));
+                FancyEggs.EggType type = findType(rs.getString("egg_key"));
+                if (type == null) continue;
+                active.computeIfAbsent(uuid, k -> new ArrayList<>())
+                        .add(plugin.new Egg(type, rs.getInt("level"), rs.getInt("charged") == 1));
             }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Aktive Eggs laden fehlgeschlagen: " + e.getMessage());
         }
 
         // Storage Eggs
-        if (config.isConfigurationSection("storage")) {
-            for (String uuidStr : config.getConfigurationSection("storage").getKeys(false)) {
-                UUID uuid;
-                try { uuid = UUID.fromString(uuidStr); } catch (IllegalArgumentException ex) { continue; }
-                List<FancyEggs.Egg> list = parseList(config.getMapList("storage." + uuidStr + ".eggs"));
-                if (!list.isEmpty()) storage.put(uuid, list);
+        try (PreparedStatement ps = plugin.getDatabaseManager().getConnection()
+                .prepareStatement("SELECT uuid, egg_key, level, charged FROM " + p
+                        + "eggs_storage ORDER BY uuid, id ASC")) {
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                UUID uuid = UUID.fromString(rs.getString("uuid"));
+                FancyEggs.EggType type = findType(rs.getString("egg_key"));
+                if (type == null) continue;
+                storage.computeIfAbsent(uuid, k -> new ArrayList<>())
+                        .add(plugin.new Egg(type, rs.getInt("level"), rs.getInt("charged") == 1));
             }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Storage-Eggs laden fehlgeschlagen: " + e.getMessage());
         }
 
-        plugin.getLogger().info("EggStorage: " + active.size() + " aktive Spieler, " + storage.size() + " Lager-Spieler geladen.");
+        plugin.getLogger().info("EggStorage (DB): " + active.size() + " aktive Spieler, "
+                + storage.size() + " Lager-Spieler geladen.");
     }
 
-    private List<FancyEggs.Egg> parseList(List<Map<?, ?>> raw) {
-        List<FancyEggs.Egg> list = new ArrayList<>();
-        for (Map<?, ?> entry : raw) {
-            String key = String.valueOf(entry.get("type"));
-            int level = entry.get("level") instanceof Number ? ((Number) entry.get("level")).intValue() : 1;
-            boolean charged = entry.get("charged") instanceof Boolean && (Boolean) entry.get("charged");
-
-            FancyEggs.EggType type = plugin.getEggTypes().stream()
-                    .filter(t -> t.key.equalsIgnoreCase(key))
-                    .findFirst().orElse(null);
-            if (type == null) continue;
-
-            list.add(plugin.new Egg(type, level, charged));
-        }
-        return list;
+    private FancyEggs.EggType findType(String key) {
+        return plugin.getEggTypes().stream()
+                .filter(t -> t.key.equalsIgnoreCase(key))
+                .findFirst().orElse(null);
     }
 
-    public void save() {
-        if (config == null) return;
-        config.set("players", null);
-        config.set("storage", null);
+    /**
+     * Speichert die Eggs eines einzelnen Spielers (nur seine Daten!).
+     * Das ist der Schlüssel: wir löschen und schreiben nicht mehr die ganze Datei,
+     * sondern nur die Daten dieses Spielers.
+     */
+    public void savePlayer(UUID uuid) {
+        String p = plugin.getDatabaseManager().getTablePrefix();
+        try (Connection con = plugin.getDatabaseManager().getConnection()) {
+            // Aktive Eggs löschen + neu schreiben
+            try (PreparedStatement del = con.prepareStatement(
+                    "DELETE FROM " + p + "eggs_active WHERE uuid = ?")) {
+                del.setString(1, uuid.toString());
+                del.executeUpdate();
+            }
 
-        for (Map.Entry<UUID, List<FancyEggs.Egg>> entry : plugin.getPlayerEggs().entrySet()) {
-            config.set("players." + entry.getKey() + ".eggs", serialize(entry.getValue()));
-        }
-        for (Map.Entry<UUID, List<FancyEggs.Egg>> entry : plugin.getPlayerStorage().entrySet()) {
-            config.set("storage." + entry.getKey() + ".eggs", serialize(entry.getValue()));
-        }
+            List<FancyEggs.Egg> active = plugin.getPlayerEggs().get(uuid);
+            if (active != null && !active.isEmpty()) {
+                try (PreparedStatement ins = con.prepareStatement(
+                        "INSERT INTO " + p + "eggs_active (uuid, egg_key, level, charged, slot_index) "
+                                + "VALUES (?, ?, ?, ?, ?)")) {
+                    int idx = 0;
+                    for (FancyEggs.Egg egg : active) {
+                        ins.setString(1, uuid.toString());
+                        ins.setString(2, egg.type.key);
+                        ins.setInt(3, egg.level);
+                        ins.setInt(4, egg.isCharged ? 1 : 0);
+                        ins.setInt(5, idx++);
+                        ins.addBatch();
+                    }
+                    ins.executeBatch();
+                }
+            }
 
-        try {
-            config.save(file);
-        } catch (IOException ex) {
-            plugin.getLogger().warning("eggs.yml konnte nicht gespeichert werden: " + ex.getMessage());
+            // Storage Eggs löschen + neu schreiben
+            try (PreparedStatement del = con.prepareStatement(
+                    "DELETE FROM " + p + "eggs_storage WHERE uuid = ?")) {
+                del.setString(1, uuid.toString());
+                del.executeUpdate();
+            }
+
+            List<FancyEggs.Egg> stored = plugin.getPlayerStorage().get(uuid);
+            if (stored != null && !stored.isEmpty()) {
+                try (PreparedStatement ins = con.prepareStatement(
+                        "INSERT INTO " + p + "eggs_storage (uuid, egg_key, level, charged) "
+                                + "VALUES (?, ?, ?, ?)")) {
+                    for (FancyEggs.Egg egg : stored) {
+                        ins.setString(1, uuid.toString());
+                        ins.setString(2, egg.type.key);
+                        ins.setInt(3, egg.level);
+                        ins.setInt(4, egg.isCharged ? 1 : 0);
+                        ins.addBatch();
+                    }
+                    ins.executeBatch();
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("savePlayer(" + uuid + ") fehlgeschlagen: " + e.getMessage());
         }
     }
 
-    private List<Map<String, Object>> serialize(List<FancyEggs.Egg> eggs) {
-        List<Map<String, Object>> raw = new ArrayList<>();
-        for (FancyEggs.Egg egg : eggs) {
-            Map<String, Object> m = new HashMap<>();
-            m.put("type", egg.type.key);
-            m.put("level", egg.level);
-            m.put("charged", egg.isCharged);
-            raw.add(m);
-        }
-        return raw;
+    /** Speichert alle Spieler (z.B. beim Shutdown). */
+    public void saveAll() {
+        Set<UUID> all = new HashSet<>();
+        all.addAll(plugin.getPlayerEggs().keySet());
+        all.addAll(plugin.getPlayerStorage().keySet());
+
+        // Auch Offline-Spieler, die gerade keine aktiven Eggs haben, müssen nicht gespeichert werden.
+        for (UUID uuid : all) savePlayer(uuid);
     }
 }
