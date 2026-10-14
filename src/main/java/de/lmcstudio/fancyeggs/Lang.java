@@ -2,113 +2,103 @@ package de.lmcstudio.fancyeggs;
 
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Lang {
-    private final String lang;
+
+    private final FancyEggs plugin;
+    private final FileConfiguration messages;
+    private final String languageCode;
     private static final Pattern HEX = Pattern.compile("&#([A-Fa-f0-9]{6})");
 
-    // === Farbschema ===
-    public static final String ORANGE = "&#F69D28"; // Hauptfarbe
-    public static final String GRAY   = "&#AAAAAA"; // Labels
-    public static final String WHITE  = "&#FFFFFF"; // Werte
-    public static final String GREEN  = "&#55FF55"; // Positives (Einkommen, ausgerüstet)
-    public static final String RED    = "&#FF5555"; // Negatives (Preis, Verkauf, Fehler)
-    public static final String AQUA   = "&#55FFFF"; // Level
-    public static final String PINK   = "&#FF55FF"; // Charged
+    // Farb-Shortcuts (für Nutzung im Code)
+    public static final String ORANGE = "&#F69D28";
+    public static final String GRAY   = "&#AAAAAA";
+    public static final String WHITE  = "&#FFFFFF";
+    public static final String GREEN  = "&#55FF55";
+    public static final String RED    = "&#FF5555";
+    public static final String AQUA   = "&#55FFFF";
+    public static final String PINK   = "&#FF55FF";
     public static final String BOLD   = "&l";
     public static final String RESET  = "&r";
 
-    public Lang(FileConfiguration c) { this.lang = c.getString("language","de").toLowerCase(); }
+    public Lang(FancyEggs plugin, String languageCode) {
+        this.plugin = plugin;
+        this.languageCode = languageCode;
 
-    public String get(String k) {
-        boolean en = lang.equals("en");
-        switch (k) {
-            case "menu.title": return ORANGE+BOLD+(en?"Eggs | Menu":"Eggs | Menü");
+        // Datei-Existenz prüfen
+        File langDir = new File(plugin.getDataFolder(), "languages");
+        if (!langDir.exists()) langDir.mkdirs();
 
-            case "egg.desc": return GRAY+(en?"Description":"Beschreibung");
-            case "egg.level": return AQUA+BOLD+"★ "+(en?"LEVEL ":"LEVEL ");
-            case "egg.income": return GRAY+(en?"Money / Second: ":"Geld / Sekunde: ")+GREEN+"$";
-            case "egg.upgrade_price": return GRAY+(en?"Upgrade Price: ":"Upgrade Preis: ")+RED+"$";
-            case "egg.sell_price": return GRAY+(en?"Sell Price: ":"Verkaufspreis: ")+RED+"$";
-            case "egg.left_upgrade": return ORANGE+BOLD+"➤ "+(en?"LEFT-CLICK to upgrade":"LEFT-KLICK zum Upgraden");
-            case "egg.right_remove": return ORANGE+BOLD+"➤ "+(en?"RIGHT-CLICK to store":"RECHTS-KLICK zum Einlagern");
-            case "egg.charged_tag": return PINK+BOLD+"[CHARGED] ";
-            case "egg.charged_chance": return GRAY+(en?"Charged Chance: ":"Charged Chance: ")+PINK+BOLD+"%chance%%";
-            case "egg.charged_bonus": return GRAY+(en?"Charged Bonus: ":"Charged Bonus: ")+PINK+BOLD+"+%bonus%%";
+        File langFile = new File(langDir, languageCode + ".yml");
 
-            case "msg.no_permission": return RED+(en?"No permission.":"Keine Rechte.");
-            case "msg.give_usage": return RED+(en?"Usage: /fancyeggs give <player> <egg> [forced|normal]":"Nutzung: /fancyeggs give <Spieler> <EggKey> [forced|normal]");
-            case "msg.available": return ORANGE+BOLD+(en?"Available: ":"Verfügbar: ")+RESET+WHITE;
-            case "msg.player_not_found": return RED+(en?"Player not found.":"Spieler nicht gefunden.");
-            case "msg.egg_not_found": return RED+(en?"Egg not found.":"Egg nicht gefunden.");
-            case "msg.give_sender": return ORANGE+BOLD+(en?"Gave %player% a %egg%%charged%.":"Du hast %player% ein %egg%%charged% gegeben.");
-            case "msg.give_target": return ORANGE+BOLD+(en?"You received a %egg%%charged%!":"Du hast ein %egg%%charged% erhalten!");
-            case "msg.charged_suffix": return PINK+BOLD+" (Charged)";
-            case "msg.upgraded": return ORANGE+BOLD+(en?"Egg upgraded! New Level: ":"Egg upgraded! Neues Level: ")+AQUA;
-            case "msg.not_enough": return RED+(en?"Not enough money! Needed: $":"Nicht genug Geld! Benötigt: $");
-            case "msg.sold": return ORANGE+BOLD+(en?"Sold %egg% for $%price%!":"%egg% für $%price% verkauft!");
-            case "msg.only_players_menu": return RED+(en?"Only players.":"Nur Spieler.");
-            case "msg.slots_moved": return ORANGE+(en?"Your slot limit decreased. %amount% egg(s) moved to storage.":"Dein Slot-Limit wurde verringert. %amount% Egg(s) ins Lager verschoben.");
+        // Falls die Datei fehlt → aus JAR extrahieren oder leer anlegen
+        if (!langFile.exists()) {
+            String resource = "languages/" + languageCode + ".yml";
+            if (plugin.getResource(resource) != null) {
+                plugin.saveResource(resource, false);
+            } else {
+                // Fallback: en_US aus JAR holen
+                plugin.getLogger().warning("Sprachdatei '" + languageCode
+                        + ".yml' nicht gefunden. Verwende en_US als Fallback.");
+                if (plugin.getResource("languages/en_US.yml") != null) {
+                    plugin.saveResource("languages/en_US.yml", false);
+                }
+            }
+        }
 
-            case "list.header": return ORANGE+BOLD+(en?"========== FancyEggs List ==========":"========== FancyEggs Liste ==========");
-            case "list.name": return ORANGE+BOLD+"▶ ";
-            case "list.base_income": return GRAY+(en?"Base income: ":"Basis-Einkommen: ")+GREEN+"$";
-            case "list.upgrade_cost": return GRAY+(en?"Upgrade cost: ":"Upgrade-Kosten: ")+RED+"$";
-            case "list.multiplier": return GRAY+(en?"Multiplier: ":"Multiplikator: ")+AQUA+"x";
-            case "list.footer": return ORANGE+BOLD+"===================================";
+        this.messages = YamlConfiguration.loadConfiguration(langFile);
 
-            case "autocollect.on_name": return GREEN+BOLD+(en?"AUTO-COLLECT: ON":"AUTO-COLLECT: AN");
-            case "autocollect.off_name": return RED+BOLD+(en?"AUTO-COLLECT: OFF":"AUTO-COLLECT: AUS");
-            case "autocollect.desc": return GRAY+(en?"Description":"Beschreibung");
-            case "autocollect.info": return ORANGE+BOLD+(en?"Information:":"Information:");
-            case "autocollect.on_text": return WHITE+(en?"Money is auto-collected every second.":"Geld wird jede Sekunde automatisch gesammelt.");
-            case "autocollect.off_text": return WHITE+(en?"Money accumulates in the chest.":"Geld sammelt sich in der Kiste an.");
-            case "autocollect.click": return ORANGE+BOLD+"➤ "+(en?"CLICK to toggle":"KLICK zum Umschalten");
-
-            case "pending.name": return ORANGE+BOLD+(en?"PENDING MONEY":"AUSSTEHENDES GELD");
-            case "pending.desc": return GRAY+(en?"Description":"Beschreibung");
-            case "pending.info": return ORANGE+BOLD+(en?"Information:":"Information:");
-            case "pending.amount": return GRAY+(en?"Pending: ":"Ausstehend: ");
-            case "pending.click": return ORANGE+BOLD+"➤ "+(en?"CLICK to collect":"KLICK zum Einsammeln");
-            case "pending.collected": return GREEN+BOLD+(en?"Collected $%amount%!":"$%amount% eingesammelt!");
-            case "pending.empty": return RED+(en?"Nothing to collect.":"Nichts zum Einsammeln.");
-
-            case "storage.name": return ORANGE+BOLD+(en?"EGGS STORAGE":"EGGS LAGER");
-            case "storage.desc": return GRAY+(en?"Description":"Beschreibung");
-            case "storage.info": return ORANGE+BOLD+(en?"Information:":"Information:");
-            case "storage.click": return WHITE+(en?"Click to view your storage.":"Klicke hier um dein Lager zu öffnen.");
-            case "storage.count": return ORANGE+BOLD+(en?"➤ Stored: ":"➤ Gelagert: ");
-            case "storage.active": return ORANGE+BOLD+(en?"➤ Active: ":"➤ Aktiv: ");
-            case "storage.moved_to_storage": return ORANGE+BOLD+(en?"%egg% moved to storage.":"%egg% ins Lager verschoben.");
-            case "storage.moved_to_active": return GREEN+BOLD+(en?"%egg% equipped!":"%egg% ausgerüstet!");
-            case "storage.full_active": return RED+(en?"Max active eggs reached!":"Maximale aktive Eggs erreicht!");
-            case "storage.menu.title": return ORANGE+BOLD+(en?"Eggs | Storage":"Eggs | Lager");
-            case "storage.page.prev": return ORANGE+BOLD+"◀ "+(en?"Previous Page":"Vorherige Seite");
-            case "storage.page.next": return ORANGE+BOLD+(en?"Next Page":"Nächste Seite")+" ▶";
-            case "storage.page.info": return ORANGE+BOLD+(en?"Page ":"Seite ")+"%page%/%max%";
-            case "storage.page.click": return WHITE+(en?"Click to switch page.":"Klicke zum Wechseln.");
-            case "storage.back.name": return ORANGE+BOLD+(en?"◀ BACK TO MENU":"◀ ZURÜCK ZUM MENÜ");
-            case "storage.back.lore": return WHITE+(en?"Click to go back to the main menu.":"Klicke um zum Hauptmenü zurückzukehren.");
-            case "storage.egg.left_sell": return RED+BOLD+"➤ "+(en?"LEFT-CLICK to sell":"LINKS-KLICK zum Verkaufen");
-            case "storage.egg.right_equip": return GREEN+BOLD+"➤ "+(en?"RIGHT-CLICK to equip":"RECHTS-KLICK zum Ausrüsten");
-            case "storage.egg.shift_sell_all": return ORANGE+BOLD+"➤ "+(en?"SHIFT-CLICK to sell all":"SHIFT-KLICK zum Alle-Verkaufen");
-
-            case "console.vault_missing": return en?"Vault not found!":"Vault nicht gefunden!";
-            case "console.enabled": return en?"FancyEggs loaded!":"FancyEggs geladen!";
-            default: return "&cMissing: "+k;
+        // Standardwerte aus JAR laden (damit fehlende Keys auffallen)
+        String resource = "languages/" + languageCode + ".yml";
+        InputStream stream = plugin.getResource(resource);
+        if (stream != null) {
+            YamlConfiguration defaults = YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8));
+            messages.setDefaults(defaults);
         }
     }
 
+    public String get(String key) {
+        String value = messages.getString(key);
+        if (value == null) return "&cMissing: " + key;
+        return value;
+    }
+
     public String color(String s) {
+        if (s == null) return "";
         Matcher m = HEX.matcher(s);
         StringBuffer sb = new StringBuffer();
-        while (m.find()) m.appendReplacement(sb, ChatColor.of("#"+m.group(1)).toString());
+        while (m.find()) m.appendReplacement(sb, ChatColor.of("#" + m.group(1)).toString());
         m.appendTail(sb);
         return org.bukkit.ChatColor.translateAlternateColorCodes('&', sb.toString());
     }
 
-    public String getColored(String k) { return color(get(k)); }
+    public String getColored(String key) {
+        return color(get(key));
+    }
+
+    /** Liefert den verwendeten Sprachcode, z.B. "de_DE". */
+    public String getLanguageCode() {
+        return languageCode;
+    }
+
+    /** Für /fancyeggs reload */
+    public void reload() {
+        File langFile = new File(plugin.getDataFolder(), "languages/" + languageCode + ".yml");
+        if (langFile.exists()) {
+            FileConfiguration newConf = YamlConfiguration.loadConfiguration(langFile);
+            // In dasselbe Objekt kopieren
+            for (String key : newConf.getKeys(true)) {
+                messages.set(key, newConf.get(key));
+            }
+        }
+    }
 }
